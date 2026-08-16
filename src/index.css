@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+/* Custom reusable components */
+@layer components {
+
+  .card {
+    @apply bg-white rounded-xl shadow-md p-6;
+  }
+
+  .milk-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg outline-none transition focus:ring-2 focus:ring-green-500 focus:border-green-500;
+  }
+
+  .milk-btn {
+    @apply bg-green-600 text-white font-medium py-2.5 px-4 rounded-lg hover:bg-green-700 transition;
+  }
+
+  .form-label {
+    @apply block mb-1.5 text-sm font-medium text-gray-700;
+  }
+
+  .stat-card {
+    @apply border border-green-500 rounded-xl px-4 py-3 text-center bg-gradient-to-r from-green-50 to-green-100;
+  }
+
+  .stat-value {
+    @apply text-2xl font-bold text-green-600;
+  }
+
+}
+
+/* Basic global styles */
+html,
+body,
+#root {
+  min-height: 100vh;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  cursor: pointer;
+}
