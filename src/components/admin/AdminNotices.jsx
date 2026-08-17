@@ -100,7 +100,7 @@ const { data } = await api.get("anouncements/"); // your Notice API endpoint
                 {notice.message}
               </p>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-gray-500">
-                <span>📅 Published: {formatDate(notice.created_at)}</span>
+                <span>Published: {formatDate(notice.created_at)}</span>
                 {notice.created_by && <span className="sm:ml-auto">👤 By: {notice.created_by}</span>}
               </div>
             </div>
