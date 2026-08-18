@@ -15,10 +15,14 @@
     "axios": "^1.19.0",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
+<<<<<<< HEAD
     "firebase": "^12.17.1",
     "framer-motion": "^13.1.0",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^1.31.0",
+=======
+    "jwt-decode": "^4.0.0",
+>>>>>>> d0f24167f0dab27373cf3141403c1d75cbbf81eb
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-hook-form": "^7.85.0",

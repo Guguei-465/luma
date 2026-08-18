@@ -18,14 +18,14 @@ const getArray = (data) => {
 const AdminNotices = () => {
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterPriority, setFilterPriority] = useState("all"); // matches real backend choices: Low / Normal / High
+  const [filterPriority, setFilterPriority] = useState("all");
   const [filterTarget, setFilterTarget] = useState("all");
   const [search, setSearch] = useState("");
 
   const fetchNotices = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get("anouncements/");
+      const { data } = await api.get("announcements/");
       setNotices(getArray(data));
     } catch {
       toast.error("Failed to load notices");
@@ -53,7 +53,7 @@ const AdminNotices = () => {
   const handleResend = async (id, title) => {
     if (!window.confirm(`Resend "${title}" to all its recipients again?`)) return;
     try {
-      const { data } = await api.post(`anouncements/${id}/resend/`);
+      const { data } = await api.post(`announcements/${id}/resend/`);
       toast.success(data.detail || "Resent successfully");
     } catch {
       toast.error("Failed to resend notice");
@@ -63,7 +63,7 @@ const AdminNotices = () => {
   const handleDelete = async (id, title) => {
     if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
     try {
-      await api.delete(`anouncements/${id}/`);
+      await api.delete(`announcements/${id}/`);
       toast.success("Notice deleted");
       fetchNotices();
     } catch {
@@ -172,11 +172,14 @@ const AdminNotices = () => {
                   )}
                 </div>
               </div>
+
               <p className="text-gray-700 leading-relaxed whitespace-pre-line mb-3">{notice.message}</p>
+
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-gray-500 mb-3">
-                <span>📅 Published: {formatDate(notice.created_at)}</span>
-                {notice.created_by_name && <span className="sm:ml-auto">👤 By: {notice.created_by_name}</span>}
+                <span>Published: {formatDate(notice.created_at)}</span>
+                <span className="sm:ml-auto">👤 By: {notice.created_by_name || notice.created_by || "Unknown"}</span>
               </div>
+
               <div className="flex gap-2 text-xs">
                 <button onClick={() => handleResend(notice.id, notice.title)} className="bg-blue-500 text-white px-3 py-1 rounded">
                   Resend
