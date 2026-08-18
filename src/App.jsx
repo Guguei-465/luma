@@ -68,9 +68,9 @@ import DailyAttendance from "./components/admin/DailyAttendance";
 import AttendanceReports from "./components/admin/AttendanceReports";
 import ExamList from "./components/admin/ExamList";
 import AddExam from "./components/admin/AddExam";
-import MarksEntry from "./components/admin/MarksEntry";
 import AdminUserList from "./components/admin/AdminUserList";
 import AdminNotices from "./components/admin/AdminNotices";
+import SendNotices from "./components/admin/SendNotices";
 import AdminProfile from "./components/admin/AdminProfile";
 import AddStudent from "./components/admin/AddStudent";
 import AcademicCoClasses from "./components/academiccoordinator/AcademicCoClasses";
@@ -139,9 +139,10 @@ function App() {
             <Route path="attendance/reports" element={<AttendanceReports />} />
             <Route path="exams" element={<ExamList />} />
             <Route path="exams/add" element={<AddExam />} />
-            <Route path="exams/marks-entry/:examId" element={<MarksEntry />} />
+            <Route path="exams/edit/:id" element={<AddExam />} />
             <Route path="users" element={<AdminUserList />} />
             <Route path="notices" element={<AdminNotices />} />
+            <Route path="notices/send" element={<SendNotices />} />
             <Route path="profile" element={<AdminProfile />} />
           </Route>
 

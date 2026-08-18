@@ -71,11 +71,12 @@ const fetchAllUsers = async () => {
           onChange={(e) => setFilterRole(e.target.value)}
         >
           <option value="all">All Roles</option>
-          <option value="admin">Admin</option>
-          <option value="teacher">Teacher</option>
-          <option value="student">Student</option>
-          <option value="parent">Parent</option>
-          <option value="staff">Staff</option>
+          <option value="SUPER_ADMIN">Super Admin</option>
+          <option value="ACADEMIC_COORDINATOR">Academic Coordinator</option>
+          <option value="ACCOUNTANT">Accountant</option>
+          <option value="TEACHER">Teacher</option>
+          <option value="PARENT">Parent</option>
+          <option value="STUDENT">Student</option>
         </select>
       </div>
 
@@ -113,7 +114,7 @@ const fetchAllUsers = async () => {
                   <td className="p-3"><RoleBadge role={user.role} /></td>
                   <td className="p-3"><StatusBadge is_active={user.is_active} /></td>
                   <td className="p-3 text-xs text-gray-600">
-                    {user.date_joined ? new Date(user.date_joined).toLocaleDateString("en-KE") : "—"}
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString("en-KE") : "—"}
                   </td>
                 </tr>
               ))}

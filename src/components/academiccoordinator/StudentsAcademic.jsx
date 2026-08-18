@@ -91,29 +91,10 @@ const StudentsAcademic = () => {
   };
 
   const getStudentClass = (student) => {
-    const currentClass =
-      student?.current_class ||
-      student?.classroom ||
-      null;
-
-    if (!currentClass) {
-      return "Unassigned";
-    }
-
-    const grade =
-      currentClass.grade ||
-      currentClass.name ||
-      currentClass.class_name ||
-      "";
-
-    const stream =
-      currentClass.stream || "";
-
-    if (grade && stream) {
-      return `${grade} - ${stream}`;
-    }
-
-    return grade || "Unassigned";
+    // `classroom` on the Student payload is just the FK id, not
+    // a nested object — the ready-to-display label is already
+    // provided as `classroom_name` by the backend.
+    return student?.classroom_name || "Unassigned";
   };
 
   // =====================================================
@@ -133,11 +114,7 @@ const StudentsAcademic = () => {
           student?.admission_number || ""
         ).toLowerCase();
 
-      const classId =
-        student?.current_class?.id ??
-        student?.classroom?.id ??
-        student?.classroom_id ??
-        null;
+      const classId = student?.classroom ?? null;
 
       const matchesSearch =
         !search ||

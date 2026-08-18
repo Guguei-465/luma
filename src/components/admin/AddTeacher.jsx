@@ -1,13 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "../api/api";
 
 const AddTeacher = () => {
   const navigate = useNavigate();
-
-  const [subjects, setSubjects] = useState([]);
-  const [loadingSubjects, setLoadingSubjects] = useState(true);
 
   const [form, setForm] = useState({
     username: "",
@@ -23,35 +20,9 @@ const AddTeacher = () => {
     date_of_birth: "",
     qualification: "",
     employment_date: "",
-    subjects: [],
   });
 
   const [submitting, setSubmitting] = useState(false);
-
-  // =====================================================
-  // FETCH SUBJECTS
-  // =====================================================
-  useEffect(() => {
-    const fetchSubjects = async () => {
-      try {
-        setLoadingSubjects(true);
-
-        const response = await api.get("subjects/");
-
-        // Handles both normal array and paginated DRF response
-        const data = response.data.results || response.data;
-
-        setSubjects(data);
-      } catch (error) {
-        console.error("Failed to fetch subjects:", error);
-        toast.error("Failed to load subjects");
-      } finally {
-        setLoadingSubjects(false);
-      }
-    };
-
-    fetchSubjects();
-  }, []);
 
   // =====================================================
   // HANDLE INPUT CHANGE
@@ -66,30 +37,17 @@ const AddTeacher = () => {
   };
 
   // =====================================================
-  // HANDLE SUBJECT SELECTION
-  // =====================================================
-  const handleSubjectChange = (e) => {
-    const selectedOptions = Array.from(
-      e.target.selectedOptions,
-      (option) => Number(option.value)
-    );
-
-    setForm((prev) => ({
-      ...prev,
-      subjects: selectedOptions,
-    }));
-  };
-
-  // =====================================================
   // SUBMIT FORM
+  //
+  // NOTE: Which subjects/classes this teacher teaches is NOT
+  // set here. Once the teacher account exists, the Academic
+  // Coordinator assigns them to classes and subjects from the
+  // Teachers page — a teacher can be assigned to any number of
+  // classes and subjects, so it doesn't belong on the
+  // registration form.
   // =====================================================
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (form.subjects.length === 0) {
-      toast.error("Please select at least one subject");
-      return;
-    }
 
     setSubmitting(true);
 
@@ -130,49 +88,28 @@ const AddTeacher = () => {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
       <div className="flex items-center gap-4 mb-6">
-
         <button
           type="button"
-          onClick={() =>
-            navigate("/admin-dashboard/teachers")
-          }
+          onClick={() => navigate("/admin-dashboard/teachers")}
           className="text-gray-500 hover:text-gray-700 text-sm"
         >
           ← Back
         </button>
 
-        <h2 className="text-3xl font-bold">
-          Add New Teacher
-        </h2>
-
+        <h2 className="text-3xl font-bold">Add New Teacher</h2>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="card space-y-6"
-      >
-
-        {/* =====================================================
-            ACCOUNT DETAILS
-        ===================================================== */}
+      <form onSubmit={handleSubmit} className="card space-y-6">
+        {/* ACCOUNT DETAILS */}
         <div>
           <p className="text-xs uppercase tracking-widest text-teal-600 font-semibold mb-4">
             Account Details
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-            {/* Username */}
             <div>
-              <label className="form-label">
-                Username *
-              </label>
-
+              <label className="form-label">Username *</label>
               <input
                 type="text"
                 name="username"
@@ -184,12 +121,8 @@ const AddTeacher = () => {
               />
             </div>
 
-            {/* Password */}
             <div>
-              <label className="form-label">
-                Password *
-              </label>
-
+              <label className="form-label">Password *</label>
               <input
                 type="password"
                 name="password"
@@ -201,47 +134,8 @@ const AddTeacher = () => {
               />
             </div>
 
-            {/* Role */}
             <div>
-              <label className="form-label">
-                Role *
-              </label>
-
-              <select
-                name="role"
-                className="milk-input"
-                value={form.role}
-                onChange={handleChange}
-                required
-              >
-                <option value="TEACHER">
-                  Teacher
-                </option>
-
-                <option value="ACADEMIC_COORDINATOR">
-                  Academic Coordinator
-                </option>
-
-                <option value="ACCOUNTANT">
-                  Accountant
-                </option>
-
-                <option value="PARENT">
-                  Parent
-                </option>
-
-                <option value="SUPER_ADMIN">
-                  Super Admin
-                </option>
-              </select>
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="form-label">
-                Email *
-              </label>
-
+              <label className="form-label">Email *</label>
               <input
                 type="email"
                 name="email"
@@ -252,27 +146,18 @@ const AddTeacher = () => {
                 required
               />
             </div>
-
           </div>
         </div>
 
-        {/* =====================================================
-            PERSONAL DETAILS
-        ===================================================== */}
+        {/* PERSONAL DETAILS */}
         <div>
-
           <p className="text-xs uppercase tracking-widest text-teal-600 font-semibold mb-4">
             Personal Details
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-            {/* First Name */}
             <div>
-              <label className="form-label">
-                First Name *
-              </label>
-
+              <label className="form-label">First Name *</label>
               <input
                 type="text"
                 name="first_name"
@@ -284,12 +169,8 @@ const AddTeacher = () => {
               />
             </div>
 
-            {/* Last Name */}
             <div>
-              <label className="form-label">
-                Last Name *
-              </label>
-
+              <label className="form-label">Last Name *</label>
               <input
                 type="text"
                 name="last_name"
@@ -301,12 +182,8 @@ const AddTeacher = () => {
               />
             </div>
 
-            {/* Phone */}
             <div>
-              <label className="form-label">
-                Phone Number *
-              </label>
-
+              <label className="form-label">Phone Number *</label>
               <input
                 type="tel"
                 name="phone_number"
@@ -318,12 +195,8 @@ const AddTeacher = () => {
               />
             </div>
 
-            {/* National ID */}
             <div>
-              <label className="form-label">
-                National ID *
-              </label>
-
+              <label className="form-label">National ID *</label>
               <input
                 type="text"
                 name="national_id"
@@ -335,12 +208,8 @@ const AddTeacher = () => {
               />
             </div>
 
-            {/* Gender */}
             <div>
-              <label className="form-label">
-                Gender *
-              </label>
-
+              <label className="form-label">Gender *</label>
               <select
                 name="gender"
                 className="milk-input"
@@ -348,26 +217,14 @@ const AddTeacher = () => {
                 onChange={handleChange}
                 required
               >
-                <option value="">
-                  Select Gender
-                </option>
-
-                <option value="Male">
-                  Male
-                </option>
-
-                <option value="Female">
-                  Female
-                </option>
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
               </select>
             </div>
 
-            {/* Date of Birth */}
             <div>
-              <label className="form-label">
-                Date of Birth *
-              </label>
-
+              <label className="form-label">Date of Birth *</label>
               <input
                 type="date"
                 name="date_of_birth"
@@ -377,27 +234,18 @@ const AddTeacher = () => {
                 required
               />
             </div>
-
           </div>
         </div>
 
-        {/* =====================================================
-            PROFESSIONAL DETAILS
-        ===================================================== */}
+        {/* PROFESSIONAL DETAILS */}
         <div>
-
           <p className="text-xs uppercase tracking-widest text-teal-600 font-semibold mb-4">
             Professional Details
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-            {/* Employee Number */}
             <div>
-              <label className="form-label">
-                Employee Number *
-              </label>
-
+              <label className="form-label">Employee Number *</label>
               <input
                 type="text"
                 name="employee_number"
@@ -409,12 +257,8 @@ const AddTeacher = () => {
               />
             </div>
 
-            {/* Qualification */}
             <div>
-              <label className="form-label">
-                Qualification *
-              </label>
-
+              <label className="form-label">Qualification *</label>
               <input
                 type="text"
                 name="qualification"
@@ -426,12 +270,8 @@ const AddTeacher = () => {
               />
             </div>
 
-            {/* Employment Date */}
             <div>
-              <label className="form-label">
-                Employment Date *
-              </label>
-
+              <label className="form-label">Employment Date *</label>
               <input
                 type="date"
                 name="employment_date"
@@ -441,106 +281,21 @@ const AddTeacher = () => {
                 required
               />
             </div>
-
           </div>
         </div>
 
-        {/* =====================================================
-            SUBJECTS
-        ===================================================== */}
-        <div>
-
-          <p className="text-xs uppercase tracking-widest text-teal-600 font-semibold mb-4">
-            Subjects Taught
-          </p>
-
-          <label className="form-label">
-            Select Subjects *
-          </label>
-
-          {loadingSubjects ? (
-            <div className="text-sm text-gray-500 py-3">
-              Loading subjects...
-            </div>
-          ) : subjects.length === 0 ? (
-            <div className="text-sm text-red-500 py-3">
-              No subjects available.
-            </div>
-          ) : (
-            <>
-              <select
-                multiple
-                name="subjects"
-                className="milk-input min-h-[160px]"
-                value={form.subjects.map(String)}
-                onChange={handleSubjectChange}
-                required
-              >
-                {subjects.map((subject) => (
-                  <option
-                    key={subject.id}
-                    value={subject.id}
-                  >
-                    {subject.name}
-                  </option>
-                ))}
-              </select>
-
-              <p className="text-xs text-gray-500 mt-2">
-                Hold Ctrl (Windows) or Command (Mac) to select
-                multiple subjects.
-              </p>
-            </>
-          )}
-
-          {/* Selected Subjects */}
-          {form.subjects.length > 0 && (
-            <div className="mt-3">
-
-              <p className="text-sm font-medium text-gray-700 mb-2">
-                Selected Subjects:
-              </p>
-
-              <div className="flex flex-wrap gap-2">
-
-                {form.subjects.map((subjectId) => {
-                  const subject = subjects.find(
-                    (item) => item.id === subjectId
-                  );
-
-                  return subject ? (
-                    <span
-                      key={subjectId}
-                      className="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-sm"
-                    >
-                      {subject.name}
-                    </span>
-                  ) : null;
-                })}
-
-              </div>
-            </div>
-          )}
-
+        <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-sm text-blue-800">
+          After registering this teacher, go to the Academic
+          Coordinator&apos;s Teachers page to assign them to classes and
+          subjects.
         </div>
 
-        {/* =====================================================
-            SUBMIT
-        ===================================================== */}
+        {/* SUBMIT */}
         <div className="pt-4">
-
-          <button
-            type="submit"
-            disabled={submitting || loadingSubjects}
-            className="milk-btn w-full"
-          >
-            {submitting
-              ? "Registering Teacher..."
-              : "Register Teacher"}
+          <button type="submit" disabled={submitting} className="milk-btn w-full">
+            {submitting ? "Registering Teacher..." : "Register Teacher"}
           </button>
-
         </div>
-
       </form>
     </div>
   );

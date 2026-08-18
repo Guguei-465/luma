@@ -14,18 +14,17 @@ const ButtonSpinner = () => (
 );
 
 const AdminProfile = () => {
-  // ✅ Matches same shape: top-level profile fields + nested user object
+  // accounts/users/<id>/ returns a FLAT CustomUser object —
+  // there is no nested "profile" for SUPER_ADMIN, since
+  // SUPER_ADMIN has no dedicated profile model on the backend.
   const [profile, setProfile] = useState({
     id: null,
-    department: "",
-    employee_id: "",
-    user: {
-      first_name: "",
-      last_name: "",
-      email: "",
-      phone_number: "",
-      role: "",
-    }
+    username: "",
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone_number: "",
+    role: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,51 +32,42 @@ const AdminProfile = () => {
   const [success, setSuccess] = useState("");
   const [editMode, setEditMode] = useState(false);
 
-  // --- Password states — EXACT same as Parent/Teacher ---
+  // --- Password states ---
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotEmail, setForgotEmail] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const { user: authUser } = useContext(AuthContext);
 
-  // --- Fetch Profile — uses current user id from auth context ---
+  // --- Fetch Profile ---
   const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
       const id = authUser?.id;
-      const { data } = await api.get(id ? `accounts/users/${id}/` : "accounts/users/"); // ✅ Uses current user endpoint
-      console.log("Raw Admin Profile data:", data);
-      // Safe array-or-object handling
-      const singleProfile = Array.isArray(data) ? data[0] : data;
-      setProfile(singleProfile || {
-        id: null, department:"", employee_id:"", user:{}
-      });
+      if (!id) {
+        setError("Could not determine the logged-in user.");
+        return;
+      }
+      const { data } = await api.get(`accounts/users/${id}/`);
+      setProfile(data);
     } catch (err) {
       console.error("Profile load error:", err.response?.data || err.message);
       setError("Failed to load profile.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authUser]);
 
-  // --- Update handler: correctly update nested user fields ---
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
-    if(["first_name","last_name","email","phone_number","role"].includes(name)){
-      setProfile(prev => ({
-        ...prev,
-        user: { ...prev.user, [name]: value }
-      }));
-    } else {
-      setProfile(prev => ({ ...prev, [name]: value }));
-    }
+    setProfile((prev) => ({ ...prev, [name]: value }));
   };
 
-  // --- Update Profile — same PUT logic ---
+  // --- Update Profile ---
   const updateProfile = async (e) => {
     e.preventDefault();
     try {
@@ -86,12 +76,15 @@ const [forgotEmail, setForgotEmail] = useState("");
       setSuccess("");
 
       if (!profile.id) throw new Error("Profile ID missing — cannot update");
-      console.log("Updating admin profile:", profile);
 
-await api.put(
-        profile.id ? `accounts/users/${profile.id}/update/` : "accounts/users/",
-        profile
-      );
+      await api.put(`accounts/users/${profile.id}/update/`, {
+        username: profile.username,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        email: profile.email,
+        phone_number: profile.phone_number,
+        role: profile.role,
+      });
 
       setSuccess("Profile updated successfully!");
       setEditMode(false);
@@ -104,7 +97,7 @@ await api.put(
     }
   };
 
-  // --- Change Password — identical logic ---
+  // --- Change Password ---
   const handleChangePassword = async (e) => {
     e.preventDefault();
     setError(""); setSuccess("");
@@ -113,7 +106,7 @@ await api.put(
 
     try {
       setSaving(true);
-await api.post("accounts/change-password/", {
+      await api.post("accounts/change-password/", {
         old_password: oldPassword,
         new_password: newPassword
       });
@@ -127,7 +120,7 @@ await api.post("accounts/change-password/", {
     }
   };
 
-  // --- Forgot Password — identical logic ---
+  // --- Forgot Password ---
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     setError(""); setSuccess("");
@@ -156,51 +149,47 @@ await api.post("accounts/change-password/", {
 
   return (
     <div className="p-4 md:p-6 space-y-6 bg-gray-50 min-h-screen">
-      {/* Header with Avatar — same usage */}
+      {/* Header with Avatar */}
       <div className="card flex items-center gap-4">
-        <UserAvatar user={profile.user} size={65} />
+        <UserAvatar user={profile} size={65} />
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-800">Admin Profile</h1>
-          <p className="text-gray-500 mt-1 text-sm">View and update your personal & official details</p>
+          <p className="text-gray-500 mt-1 text-sm">View and update your personal details</p>
         </div>
       </div>
 
-      {/* Status messages — same styling */}
+      {/* Status messages */}
       {error && <div className="card bg-red-50 border border-red-200 text-red-700 p-4">{error}</div>}
       {success && <div className="card bg-green-50 border border-green-200 text-green-700 p-4">{success}</div>}
 
-      {/* --- Main Profile Info — view & edit mode --- */}
+      {/* Main Profile Info */}
       <div className="card">
         {!editMode ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-500">First Name</p>
-                <p className="font-medium text-gray-800">{profile.user?.first_name || "—"}</p>
+                <p className="font-medium text-gray-800">{profile.first_name || "—"}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Last Name</p>
-                <p className="font-medium text-gray-800">{profile.user?.last_name || "—"}</p>
+                <p className="font-medium text-gray-800">{profile.last_name || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Username</p>
+                <p className="font-medium text-gray-800">{profile.username || "—"}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Email Address</p>
-                <p className="font-medium text-gray-800">{profile.user?.email || "—"}</p>
+                <p className="font-medium text-gray-800">{profile.email || "—"}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Phone Number</p>
-                <p className="font-medium text-gray-800">{profile.user?.phone_number || "—"}</p>
+                <p className="font-medium text-gray-800">{profile.phone_number || "—"}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Department</p>
-                <p className="font-medium text-gray-800">{profile.department || "—"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Employee / Staff ID</p>
-                <p className="font-medium text-gray-800">{profile.employee_id || "—"}</p>
-              </div>
-              <div className="md:col-span-2">
                 <p className="text-sm text-gray-500">System Role</p>
-                <p className="font-medium text-gray-800 capitalize">{profile.user?.role || "Admin"}</p>
+                <p className="font-medium text-gray-800 capitalize">{profile.role || "Admin"}</p>
               </div>
             </div>
             <button className="milk-btn mt-4" onClick={() => setEditMode(true)}>Edit Profile</button>
@@ -209,52 +198,44 @@ await api.post("accounts/change-password/", {
           <form onSubmit={updateProfile} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="form-lable">First Name</label>
-                <input type="text" className="milk-input" 
+                <label className="form-label">First Name</label>
+                <input type="text" className="milk-input"
                   name="first_name"
-                  value={profile.user?.first_name || ""}
+                  value={profile.first_name || ""}
                   onChange={handleProfileChange} required />
               </div>
               <div>
-                <label className="form-lable">Last Name</label>
-                <input type="text" className="milk-input" 
+                <label className="form-label">Last Name</label>
+                <input type="text" className="milk-input"
                   name="last_name"
-                  value={profile.user?.last_name || ""}
+                  value={profile.last_name || ""}
                   onChange={handleProfileChange} required />
               </div>
               <div>
-                <label className="form-lable">Email Address</label>
-                <input type="email" className="milk-input" 
+                <label className="form-label">Username</label>
+                <input type="text" className="milk-input"
+                  name="username"
+                  value={profile.username || ""}
+                  onChange={handleProfileChange} required />
+              </div>
+              <div>
+                <label className="form-label">Email Address</label>
+                <input type="email" className="milk-input"
                   name="email"
-                  value={profile.user?.email || ""}
+                  value={profile.email || ""}
                   onChange={handleProfileChange} required />
               </div>
               <div>
-                <label className="form-lable">Phone Number</label>
-                <input type="tel" className="milk-input" 
+                <label className="form-label">Phone Number</label>
+                <input type="tel" className="milk-input"
                   name="phone_number"
-                  value={profile.user?.phone_number || ""}
+                  value={profile.phone_number || ""}
                   onChange={handleProfileChange} />
               </div>
               <div>
-                <label className="form-lable">Department</label>
-                <input type="text" className="milk-input" 
-                  name="department"
-                  value={profile.department || ""}
-                  onChange={handleProfileChange} />
-              </div>
-              <div>
-                <label className="form-lable">Employee / Staff ID</label>
-                <input type="text" className="milk-input" 
-                  name="employee_id"
-                  value={profile.employee_id || ""}
-                  onChange={handleProfileChange} />
-              </div>
-              <div className="md:col-span-2">
-                <label className="form-lable">System Role</label>
-                <input type="text" className="milk-input" 
-                  name="role"
-                  value={profile.user?.role || "Admin"} readOnly />
+                <label className="form-label">System Role</label>
+                <input type="text" className="milk-input"
+                  value={profile.role || "Admin"} readOnly disabled />
               </div>
             </div>
             <div className="flex gap-3 mt-4">
@@ -268,7 +249,7 @@ await api.post("accounts/change-password/", {
         )}
       </div>
 
-      {/* --- CHANGE PASSWORD — identical toggle & form --- */}
+      {/* CHANGE PASSWORD */}
       <div className="card">
         <button type="button" className="text-blue-600 font-medium"
           onClick={() => { setShowChangePassword(!showChangePassword); setShowForgotPassword(false); }}>
@@ -278,17 +259,17 @@ await api.post("accounts/change-password/", {
         {showChangePassword && (
           <form onSubmit={handleChangePassword} className="mt-4 space-y-4">
             <div>
-              <label className="form-lable">Current Password</label>
+              <label className="form-label">Current Password</label>
               <input type="password" className="milk-input" value={oldPassword}
                 onChange={(e) => setOldPassword(e.target.value)} required />
             </div>
             <div>
-              <label className="form-lable">New Password</label>
+              <label className="form-label">New Password</label>
               <input type="password" className="milk-input" value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)} required />
             </div>
             <div>
-              <label className="form-lable">Confirm New Password</label>
+              <label className="form-label">Confirm New Password</label>
               <input type="password" className="milk-input" value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)} required />
             </div>
@@ -298,7 +279,6 @@ await api.post("accounts/change-password/", {
           </form>
         )}
 
-        {/* --- FORGOT PASSWORD — identical section --- */}
         <div className="mt-3">
           <button type="button" className="text-sm text-gray-600 underline"
             onClick={() => { setShowForgotPassword(!showForgotPassword); setShowChangePassword(false); }}>

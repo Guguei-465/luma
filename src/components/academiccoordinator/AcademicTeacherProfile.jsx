@@ -489,32 +489,12 @@ const AcademicTeacherProfile = () => {
           return null;
         }
 
-        try {
-          const response =
-            await api.get(
-              `/acounts/teacher-profiles/${teacherId}/`
-            );
-
-          console.log(
-            "TEACHER PROFILE DETAIL:",
-            response.data
-          );
-
-          setTeacher(
-            response.data
-          );
-
-          return response.data;
-        } catch (detailError) {
-          console.error(
-            "TEACHER DETAIL FAILED:",
-            detailError.response?.data ||
-              detailError.message
-          );
-        }
-
         // ---------------------------------------------
-        // FALLBACK LIST
+        // NOTE: the backend only exposes
+        // accounts/teacher-profiles/ as a LIST endpoint —
+        // there is no per-id detail route registered, so a
+        // detail GET here would always 404. Go straight to
+        // the list and find this teacher in it.
         // ---------------------------------------------
 
         try {

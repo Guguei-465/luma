@@ -70,25 +70,12 @@ const CoordinatorStudents = () => {
   };
 
   const getClassName = (student) => {
-    const currentClass = student?.current_class;
-
-    if (!currentClass) {
-      return "Unassigned";
-    }
-
-    const grade =
-      currentClass.grade ||
-      currentClass.name ||
-      currentClass.class_name ||
-      "";
-
-    const stream = currentClass.stream || "";
-
-    if (grade && stream) {
-      return `${grade} - ${stream}`;
-    }
-
-    return grade || "Unassigned";
+    // The backend already returns the display-ready label as
+    // `classroom_name` (there is no nested `current_class`
+    // object — `classroom` is just the FK id). Using
+    // `classroom_name` directly is what actually reflects a
+    // real assignment instead of always showing "Unassigned".
+    return student?.classroom_name || "Unassigned";
   };
 
   const getGender = (student) => {
@@ -118,11 +105,7 @@ const CoordinatorStudents = () => {
         studentName.includes(search) ||
         admissionNumber.includes(search);
 
-      const studentClassId =
-        student?.current_class?.id ??
-        student?.classroom?.id ??
-        student?.classroom_id ??
-        null;
+      const studentClassId = student?.classroom ?? null;
 
       const matchesClass =
         selectedClass === "all" ||
@@ -147,9 +130,7 @@ const CoordinatorStudents = () => {
   ).length;
 
   const assignedStudents = students.filter(
-    (student) =>
-      student?.current_class ||
-      student?.classroom
+    (student) => Boolean(student?.classroom)
   ).length;
 
   // =====================================================

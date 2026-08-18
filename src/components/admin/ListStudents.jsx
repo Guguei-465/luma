@@ -9,17 +9,30 @@ const studentTabs = [
   { to: "/admin-dashboard/students/add", icon: "bi bi-person-plus-fill", label: "Register Student" },
 ];
 
+const getArray = (data) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  return [];
+};
+
 const ListStudents = () => {
   const [students, setStudents] = useState([]);
+  const [classrooms, setClassrooms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState(""); // search filter
+  const [search, setSearch] = useState("");
   const navigate = useNavigate();
+
+  // Transfer modal state
+  const [transferTarget, setTransferTarget] = useState(null); // student being transferred
+  const [transferClassroom, setTransferClassroom] = useState("");
+  const [transferReason, setTransferReason] = useState("");
+  const [transferring, setTransferring] = useState(false);
 
   // ── Load all students ──
   const fetchStudents = async () => {
     try {
       const { data } = await api.get("students/");
-      setStudents(data);
+      setStudents(getArray(data));
     } catch {
       toast.error("Failed to load student list");
     } finally {
@@ -27,80 +40,110 @@ const ListStudents = () => {
     }
   };
 
+  const fetchClassrooms = async () => {
+    try {
+      const { data } = await api.get("classes/");
+      setClassrooms(getArray(data));
+    } catch {
+      // non-fatal, transfer dropdown will just be empty
+    }
+  };
+
   useEffect(() => {
     fetchStudents();
+    fetchClassrooms();
   }, []);
 
-  // ── Search filter logic ──
-  const filteredStudents = students.filter(s =>
-    `${s.first_name} ${s.last_name}`.toLowerCase().includes(search.toLowerCase()) ||
-    s.admission_number.toLowerCase().includes(search.toLowerCase()) ||
-    s.current_class.toLowerCase().includes(search.toLowerCase())
-  );
+  // ── Search filter logic (guards against missing fields) ──
+  const filteredStudents = students.filter((s) => {
+    const term = search.toLowerCase();
+    const name = `${s.first_name || ""} ${s.last_name || ""}`.toLowerCase();
+    const admission = (s.admission_number || "").toLowerCase();
+    const classroomName = (s.classroom_name || "").toLowerCase();
+    return (
+      name.includes(term) ||
+      admission.includes(term) ||
+      classroomName.includes(term)
+    );
+  });
 
   // ── Delete student ──
-const handleDelete = async (id, fullName) => {
+  const handleDelete = async (id, fullName) => {
     if (!window.confirm(`Permanently delete ${fullName}?`)) return;
     try {
       await api.delete(`students/delete/${id}/`);
       toast.success("Student deleted successfully");
-      fetchStudents(); // refresh list
+      fetchStudents();
     } catch {
       toast.error("Delete failed — student may have linked records");
     }
   };
 
-  // ✅ TRANSFER: Change Class / Stream
-  const handleTransferClass = async (student) => {
-    const newClass = prompt(`Enter NEW class for ${student.first_name} ${student.last_name}:\nCurrent: ${student.current_class}`);
-    if (!newClass || newClass.trim() === student.current_class) return;
-
-    const newStream = prompt(`Enter NEW stream (leave blank to keep: ${student.stream || "None"}):`);
-
+  // ── Mark as Transferred / Graduated (status only) ──
+  const handleStatusChange = async (student, status) => {
     try {
-await api.patch(`students/update/${student.id}/`, {
-        current_class: newClass.trim(),
-        stream: newStream?.trim() || student.stream,
-        notes: `${student.notes || ""}\n[${new Date().toLocaleDateString()}] Transferred to Class ${newClass}`
-      });
-      toast.success(`✅ Student moved to ${newClass} ${newStream || ""}`);
+      await api.patch(`students/update/${student.id}/`, { status });
+      toast.success(`Status updated to ${status}`);
       fetchStudents();
     } catch {
-      toast.error("❌ Failed to transfer class");
+      toast.error("Failed to update status");
     }
   };
 
-  // ✅ TRANSFER: Move to Another School
-  const handleTransferSchool = async (student) => {
-    const newSchool = prompt(`Enter FULL NAME of NEW school for ${student.first_name} ${student.last_name}:`);
-    if (!newSchool) return;
+  // ── Open the "change class" flow ──
+  const openTransfer = (student) => {
+    setTransferTarget(student);
+    setTransferClassroom("");
+    setTransferReason("");
+  };
 
-    const confirm = window.confirm(`Transfer ${student.first_name} to:\n"${newSchool}"?\nThis will mark them inactive in current school.`);
-    if (!confirm) return;
+  const submitTransfer = async () => {
+    if (!transferTarget || !transferClassroom) return;
 
+    if (String(transferClassroom) === String(transferTarget.classroom)) {
+      toast.error("Choose a different class to transfer into.");
+      return;
+    }
+
+    setTransferring(true);
     try {
-await api.patch(`students/update/${student.id}/`, {
-        school_name: newSchool,
-        is_active: false, // no longer active here
-        notes: `${student.notes || ""}\n[${new Date().toLocaleDateString()}] TRANSFERRED TO: ${newSchool}`
+      await api.post("students/transfer/", {
+        student: transferTarget.id,
+        from_classroom: transferTarget.classroom,
+        to_classroom: transferClassroom,
+        reason: transferReason,
       });
-      toast.success(`✅ Student transferred to ${newSchool}`);
+      toast.success(
+        `${transferTarget.first_name} ${transferTarget.last_name} moved successfully.`
+      );
+      setTransferTarget(null);
       fetchStudents();
-    } catch {
-      toast.error("❌ Transfer failed");
+    } catch (err) {
+      const msg = err.response?.data
+        ? Object.values(err.response.data).flat().join(" ")
+        : "Failed to transfer student";
+      toast.error(msg);
+    } finally {
+      setTransferring(false);
     }
   };
 
   // ── Status badge helper ──
-  const StatusBadge = ({ active }) => (
-    <span className={`px-2 py-1 rounded text-xs font-medium ${
-      active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-    }`}>
-      {active ? "Active" : "Transferred/Inactive"}
-    </span>
-  );
+  const StatusBadge = ({ status }) => {
+    const styles =
+      status === "Active"
+        ? "bg-green-100 text-green-700"
+        : status === "Graduated"
+        ? "bg-blue-100 text-blue-700"
+        : "bg-yellow-100 text-yellow-700";
+    return (
+      <span className={`px-2 py-1 rounded text-xs font-medium ${styles}`}>
+        {status || "—"}
+      </span>
+    );
+  };
 
-return (
+  return (
     <div className="p-6">
       <div className="mb-6">
         <h2 className="text-3xl font-bold text-gray-800">Student Management</h2>
@@ -142,8 +185,8 @@ return (
                 <tr>
                   <th className="p-3 text-left">Student Name</th>
                   <th className="p-3 text-left">Admission No.</th>
-                  <th className="p-3 text-left">Current Class</th>
-                  <th className="p-3 text-left">School</th>
+                  <th className="p-3 text-left">Class</th>
+                  <th className="p-3 text-left">Parent</th>
                   <th className="p-3 text-left">Status</th>
                   <th className="p-3 text-left">Actions</th>
                 </tr>
@@ -153,9 +196,13 @@ return (
                   <tr key={s.id} className="border-b hover:bg-gray-50">
                     <td className="p-3 font-medium">{s.first_name} {s.last_name}</td>
                     <td className="p-3">{s.admission_number}</td>
-                    <td className="p-3">{s.current_class} {s.stream && `(${s.stream})`}</td>
-                    <td className="p-3 text-sm">{s.school_name || "Current School"}</td>
-                    <td className="p-3"><StatusBadge active={s.is_active} /></td>
+                    <td className="p-3">
+                      {s.classroom_name || (
+                        <span className="text-yellow-600">Not assigned</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-sm">{s.parent_name || "—"}</td>
+                    <td className="p-3"><StatusBadge status={s.status} /></td>
                     <td className="p-3 space-x-2 text-xs">
                       <button
                         onClick={() => navigate(`/admin-dashboard/students/edit/${s.id}`)}
@@ -163,14 +210,9 @@ return (
                         Edit
                       </button>
                       <button
-                        onClick={() => handleTransferClass(s)}
+                        onClick={() => openTransfer(s)}
                         className="bg-yellow-500 text-white px-2 py-1 rounded">
-                        Transfer Class
-                      </button>
-                      <button
-                        onClick={() => handleTransferSchool(s)}
-                        className="bg-purple-500 text-white px-2 py-1 rounded">
-                        Transfer School
+                        Change Class
                       </button>
                       <button
                         onClick={() => handleDelete(s.id, `${s.first_name} ${s.last_name}`)}
@@ -190,12 +232,16 @@ return (
               <div key={s.id} className="card p-4">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="font-bold text-lg">{s.first_name} {s.last_name}</h3>
-                  <StatusBadge active={s.is_active} />
+                  <StatusBadge status={s.status} />
                 </div>
                 <div className="text-sm space-y-1 mb-3">
                   <p><span className="text-gray-500">Admission:</span> {s.admission_number}</p>
-                  <p><span className="text-gray-500">Class:</span> {s.current_class} {s.stream && `(${s.stream})`}</p>
-                  <p><span className="text-gray-500">School:</span> {s.school_name || "Current School"}</p>
+                  <p>
+                    <span className="text-gray-500">Class:</span>{" "}
+                    {s.classroom_name || (
+                      <span className="text-yellow-600">Not assigned</span>
+                    )}
+                  </p>
                   {s.parent_name && <p><span className="text-gray-500">Parent:</span> {s.parent_name}</p>}
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs">
@@ -205,14 +251,9 @@ return (
                     Edit
                   </button>
                   <button
-                    onClick={() => handleTransferClass(s)}
+                    onClick={() => openTransfer(s)}
                     className="bg-yellow-500 text-white px-2 py-1 rounded">
-                    Transfer Class
-                  </button>
-                  <button
-                    onClick={() => handleTransferSchool(s)}
-                    className="bg-purple-500 text-white px-2 py-1 rounded">
-                    Transfer School
+                    Change Class
                   </button>
                   <button
                     onClick={() => handleDelete(s.id, `${s.first_name} ${s.last_name}`)}
@@ -222,6 +263,87 @@ return (
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── TRANSFER MODAL ── */}
+      {transferTarget && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-md space-y-4">
+            <h3 className="text-lg font-semibold">
+              Change class for {transferTarget.first_name} {transferTarget.last_name}
+            </h3>
+            <p className="text-sm text-gray-500">
+              Current class: {transferTarget.classroom_name || "Not assigned"}
+            </p>
+
+            <div>
+              <label className="form-label">New Class *</label>
+              <select
+                className="milk-input"
+                value={transferClassroom}
+                onChange={(e) => setTransferClassroom(e.target.value)}
+              >
+                <option value="">Select a class</option>
+                {classrooms
+                  .filter((c) => String(c.id) !== String(transferTarget.classroom))
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.grade} {c.stream}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="form-label">Reason (optional)</label>
+              <textarea
+                className="milk-input resize-none"
+                rows={2}
+                value={transferReason}
+                onChange={(e) => setTransferReason(e.target.value)}
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg font-medium flex-1"
+                onClick={() => setTransferTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="milk-btn flex-1"
+                disabled={!transferClassroom || transferring}
+                onClick={submitTransfer}
+              >
+                {transferring ? "Moving..." : "Confirm Transfer"}
+              </button>
+            </div>
+
+            <div className="border-t pt-3 flex justify-between text-xs text-gray-500">
+              <button
+                className="underline"
+                onClick={() => {
+                  handleStatusChange(transferTarget, "Graduated");
+                  setTransferTarget(null);
+                }}
+              >
+                Mark as Graduated instead
+              </button>
+              <button
+                className="underline"
+                onClick={() => {
+                  handleStatusChange(transferTarget, "Transferred");
+                  setTransferTarget(null);
+                }}
+              >
+                Mark as Transferred (left school)
+              </button>
+            </div>
           </div>
         </div>
       )}

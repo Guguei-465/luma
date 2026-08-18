@@ -3,30 +3,50 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "../api/api";
 
+const getArray = (data) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.results)) return data.results;
+  return [];
+};
+
 const EditStudent = () => {
   const { id } = useParams(); // Student ID from URL
   const navigate = useNavigate();
 
-  // ✅ Matches AddStudentRegister form exactly
+  // Matches the real Student model / StudentSerializer fields.
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
     admission_number: "",
+    assessment_number: "",
+    gender: "",
     date_of_birth: "",
-    current_class: "",
-    stream: "",
-    parent_id: "",
-    parent_name: "",
-    parent_phone: "",
-    school_name: "",
-    is_active: true,
-    notes: ""
+    classroom: "",
+    status: "Active",
   });
 
+  // Read-only context, shown but not editable here.
+  const [parentName, setParentName] = useState("");
+  const [classroomName, setClassroomName] = useState("");
+
+  const [classrooms, setClassrooms] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
-  // ── Load existing student data ────────────────────────
+  // ── Load classrooms for the dropdown ──
+  useEffect(() => {
+    const fetchClassrooms = async () => {
+      try {
+        const { data } = await api.get("classes/");
+        setClassrooms(getArray(data));
+      } catch {
+        toast.error("Failed to load classes list");
+      }
+    };
+    fetchClassrooms();
+  }, []);
+
+  // ── Load existing student data ──
   useEffect(() => {
     const fetchStudent = async () => {
       try {
@@ -35,18 +55,16 @@ const EditStudent = () => {
           first_name: data.first_name || "",
           last_name: data.last_name || "",
           admission_number: data.admission_number || "",
+          assessment_number: data.assessment_number || "",
+          gender: data.gender || "",
           date_of_birth: data.date_of_birth || "",
-          current_class: data.current_class || "",
-          stream: data.stream || "",
-          parent_id: data.parent_id || "",
-          parent_name: data.parent_name || "",
-          parent_phone: data.parent_phone || "",
-          school_name: data.school_name || "",
-          is_active: data.is_active ?? true,
-          notes: data.notes || ""
+          classroom: data.classroom || "",
+          status: data.status || "Active",
         });
+        setParentName(data.parent_name || "");
+        setClassroomName(data.classroom_name || "");
       } catch (err) {
-        toast.error("❌ Failed to load student details.");
+        toast.error("Failed to load student details.");
       } finally {
         setFetching(false);
       }
@@ -55,33 +73,39 @@ const EditStudent = () => {
     fetchStudent();
   }, [id]);
 
-  // ── Unified input handler ──────────────────────────────
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm({ ...form, [name]: type === "checkbox" ? checked : value });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
   };
 
-  // ── Save updated data ─────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-await api.patch(`students/update/${id}/`, form);
-      toast.success("✅ Student updated successfully!");
+      const payload = { ...form };
+      // Don't send an empty assessment_number — it's
+      // unique-when-set on the backend.
+      if (!payload.assessment_number.trim()) {
+        delete payload.assessment_number;
+      }
+
+      await api.patch(`students/update/${id}/`, payload);
+      toast.success("Student updated successfully!");
       setTimeout(() => navigate("/admin-dashboard/students"), 1200);
     } catch (err) {
       const errors = err.response?.data;
       const firstError = errors
         ? Object.values(errors).flat().join(" ")
-        : "❌ Failed to update student.";
+        : "Failed to update student.";
       toast.error(firstError);
     } finally {
       setLoading(false);
     }
   };
 
-  if (fetching) return <p className="p-6 text-gray-500">Loading student details...</p>;
+  if (fetching)
+    return <p className="p-6 text-gray-500">Loading student details...</p>;
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -126,14 +150,18 @@ await api.patch(`students/update/${id}/`, form);
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="form-label">Admission Number *</label>
-            <input
-              name="admission_number"
+            <label className="form-label">Gender *</label>
+            <select
+              name="gender"
               className="milk-input"
-              value={form.admission_number}
+              value={form.gender}
               onChange={handleChange}
               required
-            />
+            >
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
           </div>
           <div>
             <label className="form-label">Date of Birth</label>
@@ -147,92 +175,83 @@ await api.patch(`students/update/${id}/`, form);
           </div>
         </div>
 
-        {/* Class & School */}
-        <p className="text-xs uppercase tracking-widest text-teal-600 font-semibold pt-2">
-          Class & School Information
-        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="form-label">Current Class *</label>
+            <label className="form-label">Admission Number *</label>
             <input
-              name="current_class"
+              name="admission_number"
               className="milk-input"
-              value={form.current_class}
+              value={form.admission_number}
               onChange={handleChange}
               required
             />
           </div>
           <div>
-            <label className="form-label">Stream / Section</label>
+            <label className="form-label">Assessment Number</label>
             <input
-              name="stream"
+              name="assessment_number"
               className="milk-input"
-              value={form.stream}
+              value={form.assessment_number}
               onChange={handleChange}
             />
           </div>
         </div>
 
-        <div>
-          <label className="form-label">School Name</label>
-          <input
-            name="school_name"
-            className="milk-input"
-            value={form.school_name}
-            onChange={handleChange}
-            placeholder="Leave empty for current school"
-          />
-        </div>
-
-        {/* Parent / Guardian */}
+        {/* Class & Status */}
         <p className="text-xs uppercase tracking-widest text-teal-600 font-semibold pt-2">
-          Parent / Guardian Details
+          Class & Status
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="form-label">Parent Full Name</label>
-            <input
-              name="parent_name"
+            <label className="form-label">Class *</label>
+            <select
+              name="classroom"
               className="milk-input"
-              value={form.parent_name}
+              value={form.classroom}
               onChange={handleChange}
-            />
+              required
+            >
+              <option value="">Select a class</option>
+              {classrooms.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.grade} {c.stream}
+                </option>
+              ))}
+            </select>
+            {classroomName && (
+              <p className="text-xs text-gray-400 mt-1">
+                Currently: {classroomName}
+              </p>
+            )}
           </div>
           <div>
-            <label className="form-label">Parent Phone Number</label>
-            <input
-              name="parent_phone"
+            <label className="form-label">Status</label>
+            <select
+              name="status"
               className="milk-input"
-              value={form.parent_phone}
+              value={form.status}
               onChange={handleChange}
-            />
+            >
+              <option value="Active">Active</option>
+              <option value="Transferred">Transferred</option>
+              <option value="Graduated">Graduated</option>
+            </select>
           </div>
         </div>
 
-        {/* Status & Notes */}
-        <div className="flex items-center gap-3 pt-2">
-          <input
-            type="checkbox"
-            name="is_active"
-            id="is_active"
-            checked={form.is_active}
-            onChange={handleChange}
-            className="w-4 h-4 accent-teal-600"
-          />
-          <label htmlFor="is_active" className="form-label mb-0">
-            Student is Active / Enrolled
-          </label>
-        </div>
-
+        {/* Parent (read-only — linked at registration time) */}
         <div>
-          <label className="form-label">Admin Notes / Transfer History</label>
-          <textarea
-            name="notes"
-            className="milk-input resize-none"
-            rows={3}
-            value={form.notes}
-            onChange={handleChange}
+          <label className="form-label">Parent / Guardian</label>
+          <input
+            className="milk-input bg-gray-50"
+            value={parentName || "—"}
+            readOnly
+            disabled
           />
+          <p className="text-xs text-gray-400 mt-1">
+            To change the linked parent, delete and re-register the student
+            with the correct parent phone number.
+          </p>
         </div>
 
         <button type="submit" disabled={loading} className="milk-btn w-full">
