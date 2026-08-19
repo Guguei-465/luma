@@ -16,9 +16,7 @@ const getArray = (data) => {
 };
 
 const ListTeachers = () => {
-  // teacherProfiles come from accounts/teacher-profiles/ — nested { id, user: {...}, employee_number, ... }
   const [teacherProfiles, setTeacherProfiles] = useState([]);
-  // assignments come from assignments/ — used only to show classes/subjects each teacher covers
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -50,7 +48,6 @@ const ListTeachers = () => {
     fetchData();
   }, []);
 
-  // Merge each teacher profile with its active classes/subjects
   const teachers = useMemo(() => {
     return teacherProfiles.map((t) => {
       const own = assignments.filter(
@@ -70,7 +67,7 @@ const ListTeachers = () => {
       ];
 
       return {
-        id: t.id, // TeacherProfile id
+        id: t.id,
         userId: t.user?.id,
         name: t.user
           ? `${t.user.first_name || ""} ${t.user.last_name || ""}`.trim() ||
@@ -162,6 +159,7 @@ const ListTeachers = () => {
             <table className="w-full text-sm">
               <thead className="border-b text-gray-500">
                 <tr>
+                  <th className="p-3 text-left w-12">#</th>
                   <th className="p-3 text-left">Full Name</th>
                   <th className="p-3 text-left">Employee No.</th>
                   <th className="p-3 text-left">Classes</th>
@@ -172,8 +170,9 @@ const ListTeachers = () => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(t => (
+                {filtered.map((t, index) => (
                   <tr key={t.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3 font-medium text-gray-500">{index + 1}</td>
                     <td className="p-3 font-medium">{t.name}</td>
                     <td className="p-3">{t.employeeNumber}</td>
                     <td className="p-3"><TagList items={t.classes} emptyLabel="Not assigned" colorClass="bg-gray-100 text-gray-700" /></td>
@@ -192,10 +191,13 @@ const ListTeachers = () => {
 
           {/* Mobile Cards */}
           <div className="md:hidden space-y-3">
-            {filtered.map(t => (
+            {filtered.map((t, index) => (
               <div key={t.id} className="card p-4">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-lg">{t.name}</h3>
+                  <h3 className="font-bold text-lg">
+                    <span className="text-gray-400 mr-2">{index + 1}.</span>
+                    {t.name}
+                  </h3>
                   <StatusBadge active={t.isActive} />
                 </div>
                 <div className="text-sm space-y-1 mb-3">

@@ -67,7 +67,6 @@ import FeePaymentsList from "./components/admin/FeePaymentsList";
 import DailyAttendance from "./components/admin/DailyAttendance";
 import AttendanceReports from "./components/admin/AttendanceReports";
 import ExamList from "./components/admin/ExamList";
-import AddExam from "./components/admin/AddExam";
 import AdminUserList from "./components/admin/AdminUserList";
 import AdminNotices from "./components/admin/AdminNotices";
 import SendNotices from "./components/admin/SendNotices";
@@ -85,6 +84,7 @@ import ParentStudentReportCard from "./components/parents/ParentStudentReportCar
 import FeeStructures from "./components/accountant/FeeStructures";
 import AcademicTeacherProfile from "./components/academiccoordinator/AcademicTeacherProfile";
 import AcademicCoordinatorResults from "./components/academiccoordinator/AcademicCoordinatorResults";
+import ParentChildren from "./components/admin/ParentChildren";
 
 function App() {
   return (
@@ -132,14 +132,13 @@ function App() {
             <Route path="teachers/edit/:id" element={<EditTeacher />} />
             <Route path="parents" element={<ListParents />} />
             <Route path="parents/add" element={<AddParent />} />
+            <Route path="parents/:id/children" element={<ParentChildren />} />
             <Route path="parents/edit/:id" element={<EditParent />} />
             <Route path="fees-structures" element={<FeeStructureList />} />
             <Route path="fees-payments" element={<FeePaymentsList />} />
             <Route path="attendance" element={<DailyAttendance />} />
             <Route path="attendance/reports" element={<AttendanceReports />} />
             <Route path="exams" element={<ExamList />} />
-            <Route path="exams/add" element={<AddExam />} />
-            <Route path="exams/edit/:id" element={<AddExam />} />
             <Route path="users" element={<AdminUserList />} />
             <Route path="notices" element={<AdminNotices />} />
             <Route path="notices/send" element={<SendNotices />} />

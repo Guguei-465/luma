@@ -1,3 +1,6 @@
+// ==========================================
+// AdminSideBar.jsx — FULL CORRECTED VERSION
+// ==========================================
 import { NavLink } from "react-router-dom";
 
 const AdminSideBar = ({ isOpen, setIsOpen }) => {
@@ -69,12 +72,13 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
           transform
           transition-transform
           duration-300
-          overflow-y-hidden
+          overflow-y-auto
           ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         <div className="p-4">
-          {/* ==== SCHOOL BRAND ==== */}
+          {/* SCHOOL BRAND */}
           <div className="flex items-center gap-3 px-2 py-3 mb-5">
             <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shadow-sm">
               <i className="bi bi-mortarboard-fill text-2xl text-white"></i>
@@ -89,7 +93,7 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
             </div>
           </div>
 
-          {/* ==== NAVIGATION ==== */}
+          {/* NAVIGATION */}
           <nav className="space-y-1">
             <p className={sectionTitle}>Main</p>
             {renderLinks(navItems)}
@@ -104,7 +108,7 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
             {renderLinks(systemItems)}
           </nav>
 
-          {/* ==== FOOTER ==== */}
+          {/* FOOTER */}
           <div className="mt-8 pt-5 border-t border-white/10">
             <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white/10">
               <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">

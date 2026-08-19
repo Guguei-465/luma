@@ -1,3 +1,6 @@
+// ==========================================
+// AdminSubNav.jsx — CORRECTED
+// ==========================================
 import { NavLink } from "react-router-dom";
 
 const AdminSubNav = ({ items, title }) => {

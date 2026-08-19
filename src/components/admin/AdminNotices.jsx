@@ -25,7 +25,7 @@ const AdminNotices = () => {
   const fetchNotices = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get("announcements/");
+      const { data } = await api.get("anouncements/");
       setNotices(getArray(data));
     } catch {
       toast.error("Failed to load notices");
@@ -53,7 +53,7 @@ const AdminNotices = () => {
   const handleResend = async (id, title) => {
     if (!window.confirm(`Resend "${title}" to all its recipients again?`)) return;
     try {
-      const { data } = await api.post(`announcements/${id}/resend/`);
+      const { data } = await api.post(`anouncements/${id}/resend/`);
       toast.success(data.detail || "Resent successfully");
     } catch {
       toast.error("Failed to resend notice");
@@ -63,7 +63,7 @@ const AdminNotices = () => {
   const handleDelete = async (id, title) => {
     if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
     try {
-      await api.delete(`announcements/${id}/`);
+      await api.delete(`anouncements/${id}/`);
       toast.success("Notice deleted");
       fetchNotices();
     } catch {

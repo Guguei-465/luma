@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import api from "../api/api";
 import AdminSubNav from "./AdminSubNav";
 
 const examTabs = [
   { to: "/admin-dashboard/exams", end: true, icon: "bi bi-pencil-square", label: "Exam Schedule" },
-  { to: "/admin-dashboard/exams/add", icon: "bi bi-file-earmark-plus", label: "Create Exam" },
 ];
 
 const getArray = (data) => {
@@ -15,16 +13,6 @@ const getArray = (data) => {
   return [];
 };
 
-// =====================================================
-// NOTE
-//
-// This is the exam SCHEDULE (which class sits which
-// paper, on what date, out of how many marks). Actual
-// marks entry happens through the Results workflow, owned
-// by each subject teacher for their assigned class — see
-// the Teacher's "Marks Entry" page — so there is no "Enter
-// Marks" action here.
-// =====================================================
 const ExamList = () => {
   const [exams, setExams] = useState([]);
   const [classrooms, setClassrooms] = useState([]);
@@ -35,7 +23,6 @@ const ExamList = () => {
   const [filterSubject, setFilterSubject] = useState("all");
   const [filterTerm, setFilterTerm] = useState("all");
   const [filterType, setFilterType] = useState("all");
-  const navigate = useNavigate();
 
   const fetchAll = async () => {
     setLoading(true);
@@ -74,24 +61,12 @@ const ExamList = () => {
     });
   }, [exams, filterClassroom, filterSubject, filterTerm, filterType, search]);
 
-  const handleDelete = async (id, label) => {
-    if (!window.confirm(`Delete "${label}"?`)) return;
-    try {
-      await api.delete(`exams/delete/${id}/`);
-      toast.success("Exam deleted");
-      fetchAll();
-    } catch {
-      toast.error("Failed to delete exam");
-    }
-  };
-
   return (
     <div className="p-6">
       <div className="mb-6">
         <h2 className="text-3xl font-bold text-gray-800">Exam Schedule</h2>
         <p className="text-gray-500 mt-1">
-          Plan which classes sit which papers, and when. Marks are entered
-          by each subject teacher from their own dashboard.
+          View all scheduled exams. Marks are entered by each subject teacher from their own dashboard.
         </p>
       </div>
 
@@ -127,12 +102,6 @@ const ExamList = () => {
         </select>
       </div>
 
-      <div className="flex justify-end mb-5">
-        <button onClick={() => navigate("/admin-dashboard/exams/add")} className="milk-btn whitespace-nowrap">
-          + Create New Exam
-        </button>
-      </div>
-
       {loading && <p className="text-gray-500">Loading exams...</p>}
       {!loading && filtered.length === 0 && (
         <p className="text-gray-500">{exams.length === 0 ? "No exams created yet" : "No exams match your filters"}</p>
@@ -149,7 +118,6 @@ const ExamList = () => {
                 <th className="p-3 text-left">Term / Year</th>
                 <th className="p-3 text-left">Exam Date</th>
                 <th className="p-3 text-left">Total Marks</th>
-                <th className="p-3 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -161,14 +129,6 @@ const ExamList = () => {
                   <td className="p-3">{exam.term} • {exam.academic_year}</td>
                   <td className="p-3">{exam.exam_date ? new Date(exam.exam_date).toLocaleDateString("en-KE") : "—"}</td>
                   <td className="p-3">{exam.total_marks}</td>
-                  <td className="p-3 space-x-2 text-xs">
-                    <button
-                      onClick={() => navigate(`/admin-dashboard/exams/edit/${exam.id}`)}
-                      className="bg-blue-500 text-white px-2 py-1 rounded">Edit</button>
-                    <button
-                      onClick={() => handleDelete(exam.id, `${exam.subject_name} — ${exam.exam_type}`)}
-                      className="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
-                  </td>
                 </tr>
               ))}
             </tbody>

@@ -42,12 +42,22 @@ const fetchAllUsers = async () => {
     </span>
   );
 
-  // Role badge
-  const RoleBadge = ({ role }) => (
-    <span className="px-2 py-1 rounded text-xs font-medium bg-teal-100 text-teal-700 capitalize">
-      {role}
-    </span>
-  );
+  // ✅ ROLE BADGE — Different colors per role
+  const RoleBadge = ({ role }) => {
+    const roleStyles = {
+      SUPER_ADMIN: "bg-purple-100 text-purple-700",
+      ACADEMIC_COORDINATOR: "bg-blue-100 text-blue-700",
+      ACCOUNTANT: "bg-yellow-100 text-yellow-700",
+      TEACHER: "bg-teal-100 text-teal-700",
+      PARENT: "bg-red-100 text-red-700",
+      STUDENT: "bg-green-100 text-green-700",
+    };
+    return (
+      <span className={`px-2 py-1 rounded text-xs font-medium capitalize ${roleStyles[role] || "bg-gray-100 text-gray-700"}`}>
+        {role.replace("_", " ")}
+      </span>
+    );
+  };
 
   return (
     <div className="p-4">

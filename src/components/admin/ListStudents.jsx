@@ -183,6 +183,7 @@ const ListStudents = () => {
             <table className="w-full text-sm">
               <thead className="border-b text-gray-500">
                 <tr>
+                  <th className="p-3 text-left w-12">#</th>
                   <th className="p-3 text-left">Student Name</th>
                   <th className="p-3 text-left">Admission No.</th>
                   <th className="p-3 text-left">Class</th>
@@ -192,8 +193,9 @@ const ListStudents = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredStudents.map(s => (
+                {filteredStudents.map((s, index) => (
                   <tr key={s.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3 font-medium text-gray-500">{index + 1}</td>
                     <td className="p-3 font-medium">{s.first_name} {s.last_name}</td>
                     <td className="p-3">{s.admission_number}</td>
                     <td className="p-3">
@@ -228,10 +230,13 @@ const ListStudents = () => {
 
           {/* ── MOBILE: Compact Cards ── */}
           <div className="md:hidden space-y-3">
-            {filteredStudents.map(s => (
+            {filteredStudents.map((s, index) => (
               <div key={s.id} className="card p-4">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-lg">{s.first_name} {s.last_name}</h3>
+                  <h3 className="font-bold text-lg">
+                    <span className="text-gray-400 mr-2">{index + 1}.</span>
+                    {s.first_name} {s.last_name}
+                  </h3>
                   <StatusBadge status={s.status} />
                 </div>
                 <div className="text-sm space-y-1 mb-3">
