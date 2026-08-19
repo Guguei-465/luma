@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import api from "../api/api";
 
 // =====================================================
@@ -17,11 +17,7 @@ const Spinner = () => (
 
 const formatMoney = (value) => {
   const amount = Number(value || 0);
-
-  if (isNaN(amount)) {
-    return "KES 0";
-  }
-
+  if (isNaN(amount)) return "KES 0";
   return `KES ${amount.toLocaleString()}`;
 };
 
@@ -32,7 +28,6 @@ const formatMoney = (value) => {
 const FeeStructures = () => {
   const [feeStructures, setFeeStructures] = useState([]);
   const [classes, setClasses] = useState([]);
-  const [payments, setPayments] = useState([]);
   const [studentFees, setStudentFees] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -59,39 +54,17 @@ const FeeStructures = () => {
   // ===================================================
 
   const extractArray = (response) => {
-    if (Array.isArray(response)) {
-      return response;
-    }
-
-    if (Array.isArray(response?.results)) {
-      return response.results;
-    }
-
-    if (Array.isArray(response?.data)) {
-      return response.data;
-    }
-
-    if (Array.isArray(response?.fee_structures)) {
-      return response.fee_structures;
-    }
-
-    if (Array.isArray(response?.payments)) {
-      return response.payments;
-    }
-
-    if (Array.isArray(response?.student_fees)) {
-      return response.student_fees;
-    }
-
-    if (Array.isArray(response?.classes)) {
-      return response.classes;
-    }
-
+    if (Array.isArray(response)) return response;
+    if (Array.isArray(response?.results)) return response.results;
+    if (Array.isArray(response?.data)) return response.data;
+    if (Array.isArray(response?.fee_structures)) return response.fee_structures;
+    if (Array.isArray(response?.student_fees)) return response.student_fees;
+    if (Array.isArray(response?.classes)) return response.classes;
     return [];
   };
 
   // ===================================================
-  // LOAD ALL FOUR GET ENDPOINTS
+  // LOAD ALL DATA
   // ===================================================
 
   const loadData = async () => {
@@ -101,93 +74,25 @@ const FeeStructures = () => {
 
       const [
         feeStructureResponse,
-        paymentResponse,
         studentFeeResponse,
         classResponse,
       ] = await Promise.all([
-        // 1. FEE STRUCTURES
         api.get("fees/fee-structures/"),
-
-        // 2. PAYMENTS
-        api.get("fees/payments/"),
-
-        // 3. STUDENT FEES
         api.get("fees/student-fees/"),
-
-        // 4. CLASSES
         api.get("classes/"),
       ]);
 
-      // =================================================
-      // DEBUG
-      // =================================================
+      console.log("========================================");
+      console.log("🎓 STUDENT FEES:", studentFeeResponse.data);
+      console.log("========================================");
 
-      console.log(
-        "========================================"
-      );
-
-      console.log(
-        "FEE STRUCTURES:",
-        feeStructureResponse.data
-      );
-
-      console.log(
-        "PAYMENTS:",
-        paymentResponse.data
-      );
-
-      console.log(
-        "STUDENT FEES:",
-        studentFeeResponse.data
-      );
-
-      console.log(
-        "CLASSES:",
-        classResponse.data
-      );
-
-      console.log(
-        "========================================"
-      );
-
-      // =================================================
-      // EXTRACT DATA
-      // =================================================
-
-      const feeData = extractArray(
-        feeStructureResponse.data
-      );
-
-      const paymentData = extractArray(
-        paymentResponse.data
-      );
-
-      const studentFeeData = extractArray(
-        studentFeeResponse.data
-      );
-
-      const classData = extractArray(
-        classResponse.data
-      );
-
-      // =================================================
-      // SAVE STATE
-      // =================================================
-
-      setFeeStructures(feeData);
-      setPayments(paymentData);
-      setStudentFees(studentFeeData);
-      setClasses(classData);
+      setFeeStructures(extractArray(feeStructureResponse.data));
+      setStudentFees(extractArray(studentFeeResponse.data));
+      setClasses(extractArray(classResponse.data));
 
     } catch (err) {
-      console.error(
-        "LOAD ALL FEE DATA ERROR:",
-        err.response?.data || err.message
-      );
-
-      setError(
-        "Failed to load fee structures, payments, student fee accounts, or classes."
-      );
+      console.error("LOAD ERROR:", err.response?.data || err.message);
+      setError("Failed to load data.");
     } finally {
       setLoading(false);
     }
@@ -207,64 +112,83 @@ const FeeStructures = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    setForm((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
-
+    setForm((prev) => ({ ...prev, [name]: value }));
     setError("");
     setSuccess("");
   };
 
   // ===================================================
-  // CLASS NAME
+  // ✅ GET CLASS NAME — DIRECT from classroom field
   // ===================================================
 
-  const getClassName = (fee) => {
-    if (fee.classroom_name) {
-      return fee.classroom_name;
+  const getStudentClassName = (studentFee) => {
+    // Your API already returns classroom as plain text string!
+    if (studentFee.classroom && studentFee.classroom !== "—") {
+      return studentFee.classroom;
     }
-
-    if (fee.class_name) {
-      return fee.class_name;
-    }
-
-    if (fee.classroom?.name) {
-      return fee.classroom.name;
-    }
-
-    if (fee.classroom?.class_name) {
-      return fee.classroom.class_name;
-    }
-
-    const classroomId =
-      typeof fee.classroom === "object"
-        ? fee.classroom?.id
-        : fee.classroom;
-
-    if (classroomId) {
-      const foundClass = classes.find(
-        (item) =>
-          Number(item.id) === Number(classroomId)
-      );
-
-      if (foundClass) {
-        return (
-          foundClass.name ||
-          foundClass.class_name ||
-          foundClass.classroom_name ||
-          foundClass.title ||
-          `Class ${foundClass.id}`
-        );
-      }
-    }
-
     return "—";
   };
 
   // ===================================================
-  // AMOUNT
+  // 🎨 UNIQUE CLASS COLORING — each class gets own color
+  // ===================================================
+
+  const getClassColorMap = useMemo(() => {
+    const uniqueClasses = [...new Set(studentFees.map(sf => sf.classroom).filter(Boolean))];
+    const colorClasses = [
+      "bg-blue-100 text-blue-800",
+      "bg-green-100 text-green-800",
+      "bg-purple-100 text-purple-800",
+      "bg-orange-100 text-orange-800",
+      "bg-pink-100 text-pink-800",
+      "bg-teal-100 text-teal-800",
+      "bg-indigo-100 text-indigo-800",
+      "bg-yellow-100 text-yellow-800",
+    ];
+    const map = {};
+    uniqueClasses.forEach((className, idx) => {
+      map[className] = colorClasses[idx % colorClasses.length];
+    });
+    return map;
+  }, [studentFees]);
+
+  // ===================================================
+  // GET TERM
+  // ===================================================
+
+  const getTerm = (studentFee) => {
+    if (studentFee.term) return studentFee.term;
+    return "—";
+  };
+
+  // ===================================================
+  // GET CLASS NAME for FEE STRUCTURES table
+  // ===================================================
+
+  const getClassName = (item) => {
+    if (item.classroom_name) return item.classroom_name;
+    if (item.class_name) return item.class_name;
+    if (item.classroom && typeof item.classroom === "string") return item.classroom;
+    if (item.classroom?.name) return item.classroom.name;
+
+    const classroomId = typeof item.classroom === "object" ? item.classroom?.id : item.classroom;
+    if (classroomId) {
+      const found = classes.find((c) => Number(c.id) === Number(classroomId));
+      if (found) {
+        return (
+          found.name ||
+          found.class_name ||
+          found.classroom_name ||
+          (found.grade && found.stream ? `${found.grade} ${found.stream}` : "") ||
+          `Class ${found.id}`
+        );
+      }
+    }
+    return "—";
+  };
+
+  // ===================================================
+  // AMOUNT HELPERS
   // ===================================================
 
   const getAmount = (fee) => {
@@ -280,73 +204,26 @@ const FeeStructures = () => {
   };
 
   // ===================================================
-  // PAYMENT AMOUNT
-  // ===================================================
-
-  const getPaymentAmount = (payment) => {
-    return Number(
-      payment.amount ??
-      payment.amount_paid ??
-      payment.paid_amount ??
-      0
-    );
-  };
-
-  // ===================================================
-  // STUDENT FEE AMOUNT
-  // ===================================================
-
-  const getStudentFeeAmount = (studentFee) => {
-    return Number(
-      studentFee.total_expected ??
-      studentFee.total_fee ??
-      studentFee.amount ??
-      studentFee.amount_due ??
-      0
-    );
-  };
-
-  // ===================================================
   // CREATE FEE STRUCTURE
   // ===================================================
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setError("");
     setSuccess("");
 
-    if (!form.classroom) {
-      setError("Please select a class.");
-      return;
-    }
-
-    if (!form.academic_year) {
-      setError("Please enter the academic year.");
-      return;
-    }
-
-    if (!form.term) {
-      setError("Please select a term.");
-      return;
-    }
+    if (!form.classroom) { setError("Please select a class."); return; }
+    if (!form.academic_year) { setError("Please enter the academic year."); return; }
+    if (!form.term) { setError("Please select a term."); return; }
 
     const amount = Number(form.amount);
-
-    if (
-      !form.amount ||
-      isNaN(amount) ||
-      amount <= 0
-    ) {
-      setError(
-        "Please enter a valid fee amount greater than zero."
-      );
+    if (!form.amount || isNaN(amount) || amount <= 0) {
+      setError("Please enter a valid fee amount greater than zero.");
       return;
     }
 
     try {
       setSaving(true);
-
       const payload = {
         classroom: Number(form.classroom),
         academic_year: Number(form.academic_year),
@@ -355,65 +232,27 @@ const FeeStructures = () => {
         description: form.description.trim(),
       };
 
-      console.log(
-        "CREATING FEE STRUCTURE:",
-        payload
-      );
+      console.log("CREATING FEE STRUCTURE:", payload);
+      const res = await api.post("fees/fee-structures/", payload);
+      console.log("FEE STRUCTURE CREATED:", res.data);
 
-      const response = await api.post(
-        "fees/fee-structures/",
-        payload
-      );
-
-      console.log(
-        "FEE STRUCTURE CREATED:",
-        response.data
-      );
-
-      setSuccess(
-        "Fee structure created successfully."
-      );
-
-      setForm({
-        classroom: "",
-        academic_year: "2026",
-        term: "",
-        amount: "",
-        description: "",
-      });
-
+      setSuccess("Fee structure created successfully.");
+      setForm({ classroom: "", academic_year: "2026", term: "", amount: "", description: "" });
       await loadData();
 
     } catch (err) {
-      console.error(
-        "CREATE FEE STRUCTURE ERROR:",
-        err.response?.data || err.message
-      );
-
+      console.error("CREATE ERROR:", err.response?.data || err.message);
       const data = err.response?.data;
-
-      if (typeof data === "string") {
-        setError(data);
-      } else if (data?.detail) {
-        setError(data.detail);
-      } else if (data?.message) {
-        setError(data.message);
-      } else if (data) {
-        const messages = Object.entries(data)
-          .map(([field, message]) => {
-            return `${field}: ${
-              Array.isArray(message)
-                ? message.join(", ")
-                : message
-            }`;
-          })
+      if (typeof data === "string") setError(data);
+      else if (data?.detail) setError(data.detail);
+      else if (data?.message) setError(data.message);
+      else if (data) {
+        const msgs = Object.entries(data)
+          .map(([f, m]) => `${f}: ${Array.isArray(m) ? m.join(", ") : m}`)
           .join(" | ");
-
-        setError(messages);
+        setError(msgs);
       } else {
-        setError(
-          "Failed to create fee structure."
-        );
+        setError("Failed to create fee structure.");
       }
     } finally {
       setSaving(false);
@@ -426,55 +265,27 @@ const FeeStructures = () => {
 
   const generateAccounts = async (feeStructure) => {
     const className = getClassName(feeStructure);
-
     const confirmed = window.confirm(
       `Generate fee accounts for students in ${className} for ${feeStructure.term}?`
     );
-
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     setGenerating(feeStructure.id);
     setError("");
     setSuccess("");
 
     try {
-      const response = await api.post(
-        `fees/fee-structures/${feeStructure.id}/generate_accounts/`
-      );
-
-      console.log(
-        "GENERATE ACCOUNTS RESPONSE:",
-        response.data
-      );
-
-      setSuccess(
-        response.data?.message ||
-          "Student fee accounts generated successfully."
-      );
-
+      const res = await api.post(`fees/fee-structures/${feeStructure.id}/generate_accounts/`);
+      console.log("GENERATE RESPONSE:", res.data);
+      setSuccess(res.data?.message || "Student fee accounts generated successfully.");
       await loadData();
-
     } catch (err) {
-      console.error(
-        "GENERATE ACCOUNTS ERROR:",
-        err.response?.data || err.message
-      );
-
+      console.error("GENERATE ERROR:", err.response?.data || err.message);
       const data = err.response?.data;
-
-      if (typeof data === "string") {
-        setError(data);
-      } else if (data?.detail) {
-        setError(data.detail);
-      } else if (data?.message) {
-        setError(data.message);
-      } else {
-        setError(
-          "Failed to generate student fee accounts."
-        );
-      }
+      if (typeof data === "string") setError(data);
+      else if (data?.detail) setError(data.detail);
+      else if (data?.message) setError(data.message);
+      else setError("Failed to generate student fee accounts.");
     } finally {
       setGenerating(null);
     }
@@ -485,37 +296,15 @@ const FeeStructures = () => {
   // ===================================================
 
   const deleteFeeStructure = async (fee) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this fee structure?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
+    if (!window.confirm("Delete this fee structure?")) return;
     try {
-      setError("");
-      setSuccess("");
-
-      await api.delete(
-        `fees/fee-structures/${fee.id}/`
-      );
-
-      setSuccess(
-        "Fee structure deleted successfully."
-      );
-
+      setError(""); setSuccess("");
+      await api.delete(`fees/fee-structures/${fee.id}/`);
+      setSuccess("Fee structure deleted successfully.");
       await loadData();
-
     } catch (err) {
-      console.error(
-        "DELETE ERROR:",
-        err.response?.data || err.message
-      );
-
-      setError(
-        "Failed to delete fee structure."
-      );
+      console.error("DELETE ERROR:", err.response?.data || err.message);
+      setError("Failed to delete fee structure.");
     }
   };
 
@@ -523,37 +312,21 @@ const FeeStructures = () => {
   // TOTALS
   // ===================================================
 
-  const totalFeeStructures =
-    feeStructures.length;
-
-  const totalStudentAccounts =
-    studentFees.length;
-
-  const totalPayments =
-    payments.length;
-
-  const totalPaid =
-    payments.reduce(
-      (total, payment) =>
-        total + getPaymentAmount(payment),
-      0
-    );
-
-  const totalExpected =
-    studentFees.reduce(
-      (total, studentFee) =>
-        total +
-        getStudentFeeAmount(studentFee),
-      0
-    );
+  const totalFeeStructures = feeStructures.length;
+  const totalStudentAccounts = studentFees.length;
+  const totalExpected = studentFees.reduce(
+    (sum, sf) => sum + Number(sf.total_fee ?? sf.total_expected ?? sf.amount ?? 0), 0
+  );
+  const totalPaid = studentFees.reduce(
+    (sum, sf) => sum + Number(sf.amount_paid ?? sf.total_paid ?? sf.paid ?? 0), 0
+  );
+  const totalBalance = totalExpected - totalPaid;
 
   // ===================================================
   // LOADING
   // ===================================================
 
-  if (loading) {
-    return <Spinner />;
-  }
+  if (loading) return <Spinner />;
 
   // ===================================================
   // RENDER
@@ -562,121 +335,42 @@ const FeeStructures = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 space-y-6">
 
-      {/* =================================================
-          HEADER
-      ================================================= */}
-
+      {/* HEADER */}
       <div className="bg-white rounded-xl shadow-sm p-6">
-
-        <h1 className="text-2xl font-bold text-gray-800">
-          Fee Structures
-        </h1>
-
-        <p className="text-gray-500 mt-1">
-          Create and manage school fee structures.
-        </p>
-
+        <h1 className="text-2xl font-bold text-gray-800">Fee Structures</h1>
+        <p className="text-gray-500 mt-1">Create and manage school fee structures.</p>
       </div>
 
-      {/* =================================================
-          SUCCESS
-      ================================================= */}
+      {/* SUCCESS / ERROR */}
+      {success && <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg p-4">{success}</div>}
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">{error}</div>}
 
-      {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 rounded-lg p-4">
-          {success}
-        </div>
-      )}
-
-      {/* =================================================
-          ERROR
-      ================================================= */}
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4">
-          {error}
-        </div>
-      )}
-
-      {/* =================================================
-          SUMMARY
-      ================================================= */}
-
+      {/* SUMMARY */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
         <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
-
-          <p className="text-sm text-gray-500">
-            Fee Structures
-          </p>
-
-          <p className="text-2xl font-bold text-gray-800 mt-1">
-            {totalFeeStructures}
-          </p>
-
+          <p className="text-sm text-gray-500">Fee Structures</p>
+          <p className="text-2xl font-bold text-gray-800 mt-1">{totalFeeStructures}</p>
         </div>
-
         <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500">
-
-          <p className="text-sm text-gray-500">
-            Student Fee Accounts
-          </p>
-
-          <p className="text-2xl font-bold text-gray-800 mt-1">
-            {totalStudentAccounts}
-          </p>
-
+          <p className="text-sm text-gray-500">Student Fee Accounts</p>
+          <p className="text-2xl font-bold text-gray-800 mt-1">{totalStudentAccounts}</p>
         </div>
-
         <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-purple-500">
-
-          <p className="text-sm text-gray-500">
-            Payments Recorded
-          </p>
-
-          <p className="text-2xl font-bold text-gray-800 mt-1">
-            {totalPayments}
-          </p>
-
+          <p className="text-sm text-gray-500">Total Expected</p>
+          <p className="text-xl font-bold text-gray-800 mt-1">{formatMoney(totalExpected)}</p>
         </div>
-
         <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-orange-500">
-
-          <p className="text-sm text-gray-500">
-            Total Payments
-          </p>
-
-          <p className="text-xl font-bold text-green-600 mt-1">
-            {formatMoney(totalPaid)}
-          </p>
-
+          <p className="text-sm text-gray-500">Total Collected</p>
+          <p className="text-xl font-bold text-green-600 mt-1">{formatMoney(totalPaid)}</p>
         </div>
-
       </div>
 
-      {/* =================================================
-          CREATE FORM
-      ================================================= */}
-
+      {/* CREATE FORM */}
       <div className="bg-white rounded-xl shadow-sm p-6">
-
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">
-          Create Fee Structure
-        </h2>
-
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 md:grid-cols-2 gap-5"
-        >
-
-          {/* CLASS */}
-
+        <h2 className="text-xl font-semibold text-gray-800 mb-6">Create Fee Structure</h2>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
-
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Class *
-            </label>
-
+            <label className="block text-sm font-medium text-gray-700 mb-2">Class *</label>
             <select
               name="classroom"
               value={form.classroom}
@@ -684,38 +378,22 @@ const FeeStructures = () => {
               required
               className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-
-              <option value="">
-                -- Select Class --
-              </option>
-
+              <option value="">-- Select Class --</option>
               {classes.map((item) => (
-
-                <option
-                  key={item.id}
-                  value={item.id}
-                >
+                <option key={item.id} value={item.id}>
                   {item.name ||
                     item.class_name ||
                     item.classroom_name ||
+                    (item.grade && item.stream ? `${item.grade} ${item.stream}` : "") ||
                     item.title ||
                     `Class ${item.id}`}
                 </option>
-
               ))}
-
             </select>
-
           </div>
 
-          {/* YEAR */}
-
           <div>
-
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Academic Year *
-            </label>
-
+            <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year *</label>
             <input
               type="number"
               name="academic_year"
@@ -724,17 +402,10 @@ const FeeStructures = () => {
               required
               className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
-
           </div>
 
-          {/* TERM */}
-
           <div>
-
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Term *
-            </label>
-
+            <label className="block text-sm font-medium text-gray-700 mb-2">Term *</label>
             <select
               name="term"
               value={form.term}
@@ -742,35 +413,15 @@ const FeeStructures = () => {
               required
               className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-
-              <option value="">
-                -- Select Term --
-              </option>
-
-              <option value="Term 1">
-                Term 1
-              </option>
-
-              <option value="Term 2">
-                Term 2
-              </option>
-
-              <option value="Term 3">
-                Term 3
-              </option>
-
+              <option value="">-- Select Term --</option>
+              <option value="Term 1">Term 1</option>
+              <option value="Term 2">Term 2</option>
+              <option value="Term 3">Term 3</option>
             </select>
-
           </div>
 
-          {/* AMOUNT */}
-
           <div>
-
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Fee Amount (KES) *
-            </label>
-
+            <label className="block text-sm font-medium text-gray-700 mb-2">Fee Amount (KES) *</label>
             <input
               type="number"
               name="amount"
@@ -782,17 +433,10 @@ const FeeStructures = () => {
               placeholder="30000"
               className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
-
           </div>
 
-          {/* DESCRIPTION */}
-
           <div className="md:col-span-2">
-
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
-
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
             <textarea
               name="description"
               value={form.description}
@@ -801,429 +445,128 @@ const FeeStructures = () => {
               placeholder="e.g. Grade 1 Term 1 School Fees"
               className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
-
           </div>
 
-          {/* SUBMIT */}
-
           <div className="md:col-span-2">
-
             <button
               type="submit"
               disabled={saving}
               className="px-8 py-3 rounded-lg bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold transition"
             >
-              {saving
-                ? "Creating Fee Structure..."
-                : "Create Fee Structure"}
+              {saving ? "Creating Fee Structure..." : "Create Fee Structure"}
             </button>
-
           </div>
-
         </form>
-
       </div>
 
-      {/* =================================================
-          EXISTING FEE STRUCTURES
-      ================================================= */}
-
+      {/* EXISTING FEE STRUCTURES */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-
         <div className="p-6 border-b">
-
-          <h2 className="text-xl font-semibold text-gray-800">
-            Existing Fee Structures
-          </h2>
-
-          <p className="text-sm text-gray-500 mt-1">
-            Fee structures loaded from the fee-structures
-            endpoint.
-          </p>
-
+          <h2 className="text-xl font-semibold text-gray-800">Existing Fee Structures</h2>
+          <p className="text-sm text-gray-500 mt-1">Fee structures loaded from the fee-structures endpoint.</p>
         </div>
-
         <div className="overflow-x-auto">
-
           <table className="w-full">
-
             <thead className="bg-gray-100">
-
               <tr>
-
-                <th className="text-left px-6 py-4">
-                  Class
-                </th>
-
-                <th className="text-left px-6 py-4">
-                  Academic Year
-                </th>
-
-                <th className="text-left px-6 py-4">
-                  Term
-                </th>
-
-                <th className="text-left px-6 py-4">
-                  Amount
-                </th>
-
-                <th className="text-left px-6 py-4">
-                  Actions
-                </th>
-
+                <th className="text-left px-6 py-4">#</th>
+                <th className="text-left px-6 py-4">Class</th>
+                <th className="text-left px-6 py-4">Academic Year</th>
+                <th className="text-left px-6 py-4">Term</th>
+                <th className="text-left px-6 py-4">Amount</th>
+                <th className="text-left px-6 py-4">Actions</th>
               </tr>
-
             </thead>
-
             <tbody>
-
               {feeStructures.length === 0 ? (
-
-                <tr>
-
-                  <td
-                    colSpan="5"
-                    className="text-center py-12 text-gray-500"
-                  >
-                    No fee structures found.
-                  </td>
-
-                </tr>
-
+                <tr><td colSpan="6" className="text-center py-12 text-gray-500">No fee structures found.</td></tr>
               ) : (
-
-                feeStructures.map((fee) => {
-
-                  const amount =
-                    getAmount(fee);
-
-                  return (
-                    <tr
-                      key={fee.id}
-                      className="border-t hover:bg-gray-50"
-                    >
-
-                      <td className="px-6 py-4">
-
-                        <span className="font-semibold text-gray-800">
-                          {getClassName(fee)}
-                        </span>
-
-                      </td>
-
-                      <td className="px-6 py-4">
-                        {fee.academic_year || "—"}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        {fee.term || "—"}
-                      </td>
-
-                      <td className="px-6 py-4">
-
-                        <span className="font-semibold text-green-600">
-                          {formatMoney(amount)}
-                        </span>
-
-                      </td>
-
-                      <td className="px-6 py-4">
-
-                        <div className="flex flex-wrap gap-2">
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              generateAccounts(fee)
-                            }
-                            disabled={
-                              generating === fee.id
-                            }
-                            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-semibold"
-                          >
-
-                            {generating === fee.id
-                              ? "Generating..."
-                              : "Generate Accounts"}
-
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              deleteFeeStructure(fee)
-                            }
-                            className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold"
-                          >
-                            Delete
-                          </button>
-
-                        </div>
-
-                      </td>
-
-                    </tr>
-                  );
-                })
-
-              )}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </div>
-
-      {/* =================================================
-          PAYMENT DATA
-      ================================================= */}
-
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-
-        <div className="p-6 border-b">
-
-          <h2 className="text-xl font-semibold text-gray-800">
-            Payment Records
-          </h2>
-
-          <p className="text-sm text-gray-500 mt-1">
-            Payments retrieved using GET
-            <code className="ml-1">
-              fees/payments/
-            </code>
-          </p>
-
-        </div>
-
-        {payments.length === 0 ? (
-
-          <div className="p-10 text-center text-gray-500">
-            No payment records found.
-          </div>
-
-        ) : (
-
-          <div className="overflow-x-auto">
-
-            <table className="w-full text-sm">
-
-              <thead className="bg-gray-100">
-
-                <tr>
-
-                  <th className="text-left px-6 py-4">
-                    Receipt
-                  </th>
-
-                  <th className="text-left px-6 py-4">
-                    Student
-                  </th>
-
-                  <th className="text-left px-6 py-4">
-                    Method
-                  </th>
-
-                  <th className="text-left px-6 py-4">
-                    Amount
-                  </th>
-
-                  <th className="text-left px-6 py-4">
-                    Term
-                  </th>
-
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                {payments.map((payment) => (
-
-                  <tr
-                    key={payment.id}
-                    className="border-t hover:bg-gray-50"
-                  >
-
-                    <td className="px-6 py-4 font-medium">
-                      {payment.receipt_number ||
-                        payment.receipt_no ||
-                        "—"}
-                    </td>
-
+                feeStructures.map((fee, index) => (
+                  <tr key={fee.id} className="border-t hover:bg-gray-50">
+                    <td className="px-6 py-4 font-medium">{index + 1}</td>
+                    <td className="px-6 py-4"><span className="font-semibold text-gray-800">{getClassName(fee)}</span></td>
+                    <td className="px-6 py-4">{fee.academic_year || "—"}</td>
+                    <td className="px-6 py-4">{fee.term || "—"}</td>
+                    <td className="px-6 py-4"><span className="font-semibold text-green-600">{formatMoney(getAmount(fee))}</span></td>
                     <td className="px-6 py-4">
-                      {payment.student_name ||
-                        payment.student?.name ||
-                        payment.student_fee?.student_name ||
-                        "—"}
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => generateAccounts(fee)}
+                          disabled={generating === fee.id}
+                          className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-semibold"
+                        >
+                          {generating === fee.id ? "Generating..." : "Generate Accounts"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteFeeStructure(fee)}
+                          className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
-
-                    <td className="px-6 py-4">
-                      {payment.payment_method ||
-                        "—"}
-                    </td>
-
-                    <td className="px-6 py-4 font-semibold text-green-600">
-                      {formatMoney(
-                        getPaymentAmount(payment)
-                      )}
-                    </td>
-
-                    <td className="px-6 py-4">
-                      {payment.term || "—"}
-                    </td>
-
                   </tr>
-
-                ))}
-
-              </tbody>
-
-            </table>
-
-          </div>
-
-        )}
-
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* =================================================
-          STUDENT FEE ACCOUNTS
-      ================================================= */}
-
+      {/* ✅ STUDENT FEE ACCOUNTS — Class DIRECT from classroom field + 🎨 Unique Colors */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-
         <div className="p-6 border-b">
-
-          <h2 className="text-xl font-semibold text-gray-800">
-            Student Fee Accounts
-          </h2>
-
-          <p className="text-sm text-gray-500 mt-1">
-            Student fee accounts retrieved using GET
-            <code className="ml-1">
-              fees/student-fees/
-            </code>
-          </p>
-
+          <h2 className="text-xl font-semibold text-gray-800">Student Fee Accounts</h2>
+          <p className="text-sm text-gray-500 mt-1">Class names show directly from records, each class has its own color ✅</p>
         </div>
-
         {studentFees.length === 0 ? (
-
-          <div className="p-10 text-center text-gray-500">
-            No student fee accounts found.
-          </div>
-
+          <div className="p-10 text-center text-gray-500">No student fee accounts found.</div>
         ) : (
-
           <div className="overflow-x-auto">
-
             <table className="w-full text-sm">
-
               <thead className="bg-gray-100">
-
                 <tr>
-
-                  <th className="text-left px-6 py-4">
-                    Student
-                  </th>
-
-                  <th className="text-left px-6 py-4">
-                    Class
-                  </th>
-
-                  <th className="text-left px-6 py-4">
-                    Expected
-                  </th>
-
-                  <th className="text-left px-6 py-4">
-                    Paid
-                  </th>
-
-                  <th className="text-left px-6 py-4">
-                    Balance
-                  </th>
-
+                  <th className="text-left px-6 py-4">#</th>
+                  <th className="text-left px-6 py-4">Student</th>
+                  <th className="text-left px-6 py-4">Class</th>
+                  <th className="text-left px-6 py-4">Term</th>
+                  <th className="text-left px-6 py-4">Expected</th>
+                  <th className="text-left px-6 py-4">Paid</th>
+                  <th className="text-left px-6 py-4">Balance</th>
                 </tr>
-
               </thead>
-
               <tbody>
-
-                {studentFees.map((studentFee) => {
-
-                  const expected =
-                    Number(
-                      studentFee.total_expected ??
-                      studentFee.total_fee ??
-                      studentFee.amount ??
-                      0
-                    );
-
-                  const paid =
-                    Number(
-                      studentFee.total_paid ??
-                      studentFee.amount_paid ??
-                      studentFee.paid ??
-                      0
-                    );
-
-                  const balance =
-                    Number(
-                      studentFee.balance ??
-                      studentFee.remaining_balance ??
-                      expected - paid
-                    );
+                {studentFees.map((studentFee, index) => {
+                  const expected = Number(studentFee.total_fee ?? studentFee.total_expected ?? studentFee.amount ?? 0);
+                  const paid = Number(studentFee.amount_paid ?? studentFee.total_paid ?? studentFee.paid ?? 0);
+                  const balance = Number(studentFee.balance ?? expected - paid);
+                  const className = getStudentClassName(studentFee);
+                  const colorClass = getClassColorMap[studentFee.classroom] || "bg-gray-100 text-gray-800";
 
                   return (
-
-                    <tr
-                      key={studentFee.id}
-                      className="border-t hover:bg-gray-50"
-                    >
-
-                      <td className="px-6 py-4 font-semibold">
-                        {studentFee.student_name ||
-                          studentFee.student?.name ||
-                          studentFee.student?.student_name ||
-                          "—"}
-                      </td>
-
+                    <tr key={studentFee.id} className="border-t hover:bg-gray-50">
+                      <td className="px-6 py-4 font-medium">{index + 1}</td>
+                      <td className="px-6 py-4 font-semibold">{studentFee.student_name || "—"}</td>
+                      {/* 🎨 COLORED CLASS BADGE */}
                       <td className="px-6 py-4">
-                        {studentFee.classroom_name ||
-                          studentFee.class_name ||
-                          studentFee.classroom?.name ||
-                          "—"}
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${colorClass}`}>
+                          {className}
+                        </span>
                       </td>
-
-                      <td className="px-6 py-4">
-                        {formatMoney(expected)}
-                      </td>
-
-                      <td className="px-6 py-4 text-green-600 font-semibold">
-                        {formatMoney(paid)}
-                      </td>
-
-                      <td className="px-6 py-4 text-red-600 font-semibold">
-                        {formatMoney(balance)}
-                      </td>
-
+                      <td className="px-6 py-4">{getTerm(studentFee)}</td>
+                      <td className="px-6 py-4">{formatMoney(expected)}</td>
+                      <td className="px-6 py-4 text-green-600 font-semibold">{formatMoney(paid)}</td>
+                      <td className="px-6 py-4 text-red-600 font-semibold">{formatMoney(balance)}</td>
                     </tr>
-
                   );
                 })}
-
               </tbody>
-
             </table>
-
           </div>
-
         )}
-
       </div>
-
     </div>
   );
 };

@@ -71,11 +71,23 @@ const ReceiptGenerator = () => {
   };
 
   // =====================================================
-  // FORMAT MONEY
+  // FORMAT MONEY — Try ALL possible field names
   // =====================================================
 
   const formatMoney = (value) => {
     return `KSh ${Number(value || 0).toLocaleString()}`;
+  };
+
+  // Helper: Get amount safely — tries multiple possible field names
+  const getAmount = (data) => {
+    return (
+      data?.amount_paid ??
+      data?.amount ??
+      data?.paid_amount ??
+      data?.total_amount ??
+      data?.payment_amount ??
+      0
+    );
   };
 
   // =====================================================
@@ -244,7 +256,7 @@ const ReceiptGenerator = () => {
                 <p className="text-sm text-gray-600">
                   Receipt No:{" "}
                   <strong className="text-gray-800">
-                    {receiptData.receipt_number || "-"}
+                    {receiptData.receipt_number || receiptData.receipt_no || receiptData.id || "-"}
                   </strong>
                 </p>
 
@@ -255,7 +267,9 @@ const ReceiptGenerator = () => {
                       ? new Date(
                           receiptData.payment_date
                         ).toLocaleDateString()
-                      : "-"}
+                      : receiptData.date
+                        ? new Date(receiptData.date).toLocaleDateString()
+                        : "-"}
                   </strong>
                 </p>
 
@@ -266,7 +280,7 @@ const ReceiptGenerator = () => {
                 <p className="text-sm text-gray-600">
                   Payment Method:{" "}
                   <strong className="text-gray-800">
-                    {receiptData.payment_method || "-"}
+                    {receiptData.payment_method || receiptData.method || "-"}
                   </strong>
                 </p>
 
@@ -274,7 +288,7 @@ const ReceiptGenerator = () => {
                   <p className="text-sm text-gray-600">
                     Trans Ref:{" "}
                     <strong>
-                      {receiptData.transaction_ref}
+                      {receiptData.transaction_ref || receiptData.transaction_reference}
                     </strong>
                   </p>
                 )}
@@ -294,21 +308,21 @@ const ReceiptGenerator = () => {
               </p>
 
               <p className="text-lg font-bold text-gray-800">
-                {receiptData.student_name || "-"}
+                {receiptData.student_name || receiptData.paid_by || "-"}
               </p>
 
               <p className="text-sm text-gray-600">
                 Admission No:{" "}
-                {receiptData.admission_number || "-"}
+                {receiptData.admission_number || receiptData.admission || "-"}
                 {" | "}
                 Class:{" "}
-                {receiptData.class_name || "-"}
+                {receiptData.class_name || receiptData.classes || receiptData.grade_stream || "-"}
               </p>
 
             </div>
 
             {/* =================================================
-                PAYMENT DETAILS
+                PAYMENT DETAILS — AMOUNT FIXED HERE
             ================================================= */}
 
             <table className="w-full mb-6">
@@ -334,14 +348,11 @@ const ReceiptGenerator = () => {
                 <tr>
 
                   <td className="p-3 border-b">
-                    {receiptData.payment_description ||
-                      "Term Fee Payment"}
+                    {receiptData.payment_description || receiptData.description || "Term Fee Payment"}
                   </td>
 
-                  <td className="p-3 border-b text-right font-bold text-lg">
-                    {formatMoney(
-                      receiptData.amount_paid
-                    )}
+                  <td className="p-3 border-b text-right font-bold text-lg text-green-700">
+                    {formatMoney(getAmount(receiptData))}
                   </td>
 
                 </tr>
@@ -363,7 +374,7 @@ const ReceiptGenerator = () => {
               )}
 
               <p className="text-sm text-green-700 font-medium">
-                Payment Received Successfully
+                ✅ Payment Received Successfully
               </p>
 
             </div>
@@ -381,8 +392,7 @@ const ReceiptGenerator = () => {
                 </p>
 
                 <p className="font-medium">
-                  {receiptData.received_by ||
-                    "Accountant"}
+                  {receiptData.received_by || receiptData.collected_by || "Accountant"}
                 </p>
 
                 <div className="border-b border-gray-400 w-48 mt-1"></div>
