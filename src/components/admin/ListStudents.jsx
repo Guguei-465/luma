@@ -15,6 +15,28 @@ const getArray = (data) => {
   return [];
 };
 
+// ✅ Consistent color generator — same class always gets same color
+const getClassColor = (className) => {
+  if (!className) return "bg-gray-100 text-gray-700";
+  const colors = [
+    "bg-blue-100 text-blue-700",
+    "bg-green-100 text-green-700",
+    "bg-yellow-100 text-yellow-700",
+    "bg-purple-100 text-purple-700",
+    "bg-pink-100 text-pink-700",
+    "bg-indigo-100 text-indigo-700",
+    "bg-red-100 text-red-700",
+    "bg-teal-100 text-teal-700",
+    "bg-orange-100 text-orange-700",
+    "bg-cyan-100 text-cyan-700",
+  ];
+  let hash = 0;
+  for (let i = 0; i < className.length; i++) {
+    hash = className.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
+
 const ListStudents = () => {
   const [students, setStudents] = useState([]);
   const [classrooms, setClassrooms] = useState([]);
@@ -199,7 +221,11 @@ const ListStudents = () => {
                     <td className="p-3 font-medium">{s.first_name} {s.last_name}</td>
                     <td className="p-3">{s.admission_number}</td>
                     <td className="p-3">
-                      {s.classroom_name || (
+                      {s.classroom_name ? (
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${getClassColor(s.classroom_name)}`}>
+                          {s.classroom_name}
+                        </span>
+                      ) : (
                         <span className="text-yellow-600">Not assigned</span>
                       )}
                     </td>
@@ -243,8 +269,12 @@ const ListStudents = () => {
                   <p><span className="text-gray-500">Admission:</span> {s.admission_number}</p>
                   <p>
                     <span className="text-gray-500">Class:</span>{" "}
-                    {s.classroom_name || (
-                      <span className="text-yellow-600">Not assigned</span>
+                    {s.classroom_name ? (
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${getClassColor(s.classroom_name)} ml-1`}>
+                        {s.classroom_name}
+                      </span>
+                    ) : (
+                      <span className="text-yellow-600 ml-1">Not assigned</span>
                     )}
                   </p>
                   {s.parent_name && <p><span className="text-gray-500">Parent:</span> {s.parent_name}</p>}
