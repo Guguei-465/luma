@@ -378,7 +378,7 @@ const FeeStructures = () => {
               required
               className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="">-- Select Class --</option>
+              <option value="">Select Class</option>
               {classes.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name ||
@@ -413,7 +413,7 @@ const FeeStructures = () => {
               required
               className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="">-- Select Term --</option>
+              <option value="">Select Term</option>
               <option value="Term 1">Term 1</option>
               <option value="Term 2">Term 2</option>
               <option value="Term 3">Term 3</option>
@@ -549,7 +549,7 @@ const FeeStructures = () => {
                     <tr key={studentFee.id} className="border-t hover:bg-gray-50">
                       <td className="px-6 py-4 font-medium">{index + 1}</td>
                       <td className="px-6 py-4 font-semibold">{studentFee.student_name || "—"}</td>
-                      {/* 🎨 COLORED CLASS BADGE */}
+                      {/*  COLORED CLASS BADGE */}
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${colorClass}`}>
                           {className}
