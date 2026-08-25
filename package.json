@@ -17,6 +17,8 @@
     "bootstrap-icons": "^1.13.1",
     "firebase": "^12.17.1",
     "framer-motion": "^13.1.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^1.31.0",
     "react": "^19.2.7",
@@ -27,6 +29,7 @@
     "react-toastify": "^11.1.0",
     "recharts": "^3.10.1",
     "tailwindcss": "^4.3.3",
+    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {

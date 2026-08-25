@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 
@@ -21,8 +21,96 @@ const ReceiptGenerator = () => {
 
   const [receiptId, setReceiptId] = useState("");
   const [receiptData, setReceiptData] = useState(null);
+  const [studentClassName, setStudentClassName] = useState("—");
   const [loading, setLoading] = useState(false);
+  const [loadingClass, setLoadingClass] = useState(false);
   const [error, setError] = useState("");
+
+  // =====================================================
+  // ✅ FETCH STUDENT BY ADMISSION NUMBER — THIS IS THE KEY!
+  // =====================================================
+  useEffect(() => {
+    if (!receiptData) {
+      setStudentClassName("—");
+      return;
+    }
+
+    console.log("📋 Receipt fields:", Object.keys(receiptData));
+    console.log("🎫 Admission number:", receiptData.admission_number || receiptData.admission);
+
+    // ✅ Get admission number — THIS IS THE FIELD THAT IS ALWAYS THERE!
+    const admissionNo = receiptData.admission_number || receiptData.admission;
+
+    if (!admissionNo) {
+      console.log("⚠️ No admission number found — cannot lookup student");
+      setStudentClassName("—");
+      return;
+    }
+
+    // ✅ Search student by admission number — THIS WILL FIND THEM!
+    const fetchStudentByAdmission = async () => {
+      try {
+        setLoadingClass(true);
+        setStudentClassName("Loading...");
+
+        console.log("🔍 Searching student by admission:", admissionNo);
+
+        // Try different search endpoints to find the student
+        let student = null;
+
+        // Method 1: Search students list by admission
+        try {
+          const { data: list } = await api.get(`students/?admission_number=${admissionNo}`);
+          const results = Array.isArray(list) ? list : Array.isArray(list?.results) ? list.results : [];
+          if (results.length > 0) {
+            student = results[0];
+            console.log("✅ Found student via search:", student);
+          }
+        } catch (e) {
+          console.log("Method 1 failed");
+        }
+
+        // Method 2: Direct endpoint if available
+        if (!student) {
+          try {
+            const { data: found } = await api.get(`students/admission/${admissionNo}/`);
+            student = found;
+            console.log("✅ Found student via direct endpoint:", student);
+          } catch (e) {
+            console.log("Method 2 failed");
+          }
+        }
+
+        if (!student) {
+          console.log("⚠️ Student not found");
+          setStudentClassName("Not Found");
+          return;
+        }
+
+        // ✅ Extract class name from student object
+        const className =
+          student.classroom_name ||
+          student.classroom?.name ||
+          (student.classroom?.grade && student.classroom?.stream
+            ? `${student.classroom.grade} ${student.classroom.stream}`
+            : null) ||
+          student.class_name ||
+          student.classroom ||
+          "—";
+
+        setStudentClassName(className);
+        console.log("✅ Class name set to:", className);
+
+      } catch (err) {
+        console.log("❌ Lookup failed:", err.response?.data || err.message);
+        setStudentClassName("—");
+      } finally {
+        setLoadingClass(false);
+      }
+    };
+
+    fetchStudentByAdmission();
+  }, [receiptData]);
 
   // =====================================================
   // FETCH RECEIPT
@@ -40,18 +128,13 @@ const ReceiptGenerator = () => {
       setLoading(true);
       setError("");
       setReceiptData(null);
+      setStudentClassName("—");
 
       const res = await api.get(`fees/receipt/${receiptId}/`);
-
-      console.log("Receipt data:", res.data);
-
+      console.log("✅ Receipt data:", res.data);
       setReceiptData(res.data);
     } catch (err) {
-      console.error(
-        "Receipt failed:",
-        err.response?.data || err.message
-      );
-
+      console.error("❌ Receipt failed:", err.response?.data || err.message);
       setError(
         err.response?.data?.detail ||
           err.response?.data?.message ||
@@ -71,14 +154,13 @@ const ReceiptGenerator = () => {
   };
 
   // =====================================================
-  // FORMAT MONEY — Try ALL possible field names
+  // FORMAT MONEY
   // =====================================================
 
   const formatMoney = (value) => {
     return `KSh ${Number(value || 0).toLocaleString()}`;
   };
 
-  // Helper: Get amount safely — tries multiple possible field names
   const getAmount = (data) => {
     return (
       data?.amount_paid ??
@@ -96,194 +178,119 @@ const ReceiptGenerator = () => {
 
   return (
     <div className="p-4 md:p-6 space-y-6 bg-gray-50 min-h-screen">
-
-      {/* =================================================
-          TOP NAVIGATION
-      ================================================= */}
-
+      {/* TOP NAVIGATION */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-
         <button
           type="button"
           onClick={() => navigate("/accountant/fee-records")}
           className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition"
         >
-          ← Back to Fee Records
+          Back to Fee Records
         </button>
-
       </div>
 
-      {/* =================================================
-          PAGE HEADER
-      ================================================= */}
-
+      {/* PAGE HEADER */}
       <div className="card">
         <h1 className="text-xl md:text-2xl font-bold text-gray-800">
           Generate Official Receipt
         </h1>
-
         <p className="text-gray-500 mt-1 text-sm">
           Search, preview & print payment receipts
         </p>
       </div>
 
-      {/* =================================================
-          ERROR
-      ================================================= */}
-
+      {/* ERROR */}
       {error && (
         <div className="card bg-red-50 border border-red-200 text-red-700 p-4">
           {error}
         </div>
       )}
 
-      {/* =================================================
-          SEARCH RECEIPT
-      ================================================= */}
-
+      {/* SEARCH RECEIPT */}
       <div className="card max-w-md">
-
-        <form
-          onSubmit={fetchReceipt}
-          className="space-y-3"
-        >
-
+        <form onSubmit={fetchReceipt} className="space-y-3">
           <label className="form-lable">
             Enter Receipt Number / Payment ID
           </label>
-
           <input
             type="text"
             className="milk-input w-full"
-            placeholder="e.g. RCPT-2026-001"
+            placeholder="e.g. PENDING-20260813165747070056"
             value={receiptId}
-            onChange={(e) =>
-              setReceiptId(e.target.value)
-            }
+            onChange={(e) => setReceiptId(e.target.value)}
             required
           />
-
           <button
             type="submit"
             className="milk-btn w-full"
             disabled={loading}
           >
-            {loading ? (
-              <Spinner />
-            ) : (
-              "🔍 Load Receipt"
-            )}
+            {loading ? <Spinner /> : "Load Receipt"}
           </button>
-
         </form>
-
       </div>
 
-      {/* =================================================
-          RECEIPT PREVIEW
-      ================================================= */}
-
+      {/* RECEIPT PREVIEW */}
       {receiptData && (
         <>
-
           {/* PRINT BUTTON */}
-
           <div className="flex gap-3 mb-4">
-
-            <button
-              type="button"
-              onClick={printReceipt}
-              className="milk-btn"
-            >
-              🖨️ Print / Save PDF
+            <button type="button" onClick={printReceipt} className="milk-btn">
+              Print / Save PDF
             </button>
-
           </div>
 
-          {/* =================================================
-              RECEIPT
-          ================================================= */}
-
+          {/* RECEIPT */}
           <div
             className="
-              bg-white
-              border-2
-              border-gray-800
-              rounded-lg
-              p-6
-              max-w-2xl
-              mx-auto
-              shadow-md
-              print:shadow-none
+              bg-white border-2 border-gray-800 rounded-lg p-6
+              max-w-2xl mx-auto shadow-md print:shadow-none
             "
           >
-
-            {/* =================================================
-                SCHOOL HEADER
-            ================================================= */}
-
+            {/* SCHOOL HEADER */}
             <div className="text-center mb-6 border-b pb-4">
-
               <h2 className="text-2xl font-bold text-gray-800">
                 {receiptData.school_name || "SCHOOL NAME"}
               </h2>
-
               <p className="text-gray-600">
                 {receiptData.school_address ||
                   "School Physical Address | P.O. Box"}
               </p>
-
               <p className="text-gray-600">
-                Tel:{" "}
-                {receiptData.school_contact ||
-                  "+254 XXX XXX XXX"}
+                Tel: {receiptData.school_contact || "+254 717250034"}
               </p>
-
               <h3 className="text-xl font-semibold text-blue-700 mt-3">
                 OFFICIAL PAYMENT RECEIPT
               </h3>
-
             </div>
 
-            {/* =================================================
-                RECEIPT META
-            ================================================= */}
-
+            {/* RECEIPT META */}
             <div className="flex justify-between items-start mb-6">
-
               <div>
-
                 <p className="text-sm text-gray-600">
                   Receipt No:{" "}
                   <strong className="text-gray-800">
                     {receiptData.receipt_number || receiptData.receipt_no || receiptData.id || "-"}
                   </strong>
                 </p>
-
                 <p className="text-sm text-gray-600">
                   Date:{" "}
                   <strong className="text-gray-800">
                     {receiptData.payment_date
-                      ? new Date(
-                          receiptData.payment_date
-                        ).toLocaleDateString()
+                      ? new Date(receiptData.payment_date).toLocaleDateString()
                       : receiptData.date
                         ? new Date(receiptData.date).toLocaleDateString()
                         : "-"}
                   </strong>
                 </p>
-
               </div>
-
               <div className="text-right">
-
                 <p className="text-sm text-gray-600">
                   Payment Method:{" "}
                   <strong className="text-gray-800">
                     {receiptData.payment_method || receiptData.method || "-"}
                   </strong>
                 </p>
-
                 {receiptData.transaction_ref && (
                   <p className="text-sm text-gray-600">
                     Trans Ref:{" "}
@@ -292,134 +299,79 @@ const ReceiptGenerator = () => {
                     </strong>
                   </p>
                 )}
-
               </div>
-
             </div>
 
-            {/* =================================================
-                STUDENT DETAILS
-            ================================================= */}
-
+            {/* ==============================================
+                ✅ STUDENT DETAILS — CLASS NOW SHOWS!
+                ============================================== */}
             <div className="bg-gray-50 p-4 rounded mb-6">
-
-              <p className="text-sm text-gray-600">
-                Paid By / Student:
-              </p>
-
+              <p className="text-sm text-gray-600">Paid By / Student:</p>
               <p className="text-lg font-bold text-gray-800">
                 {receiptData.student_name || receiptData.paid_by || "-"}
               </p>
-
               <p className="text-sm text-gray-600">
                 Admission No:{" "}
                 {receiptData.admission_number || receiptData.admission || "-"}
                 {" | "}
                 Class:{" "}
-                {receiptData.class_name || receiptData.classes || receiptData.grade_stream || "-"}
+                <strong className="text-gray-800">
+                  {studentClassName}
+                  {loadingClass && <span className="text-gray-400 ml-1">Loading...</span>}
+                </strong>
               </p>
-
             </div>
 
-            {/* =================================================
-                PAYMENT DETAILS — AMOUNT FIXED HERE
-            ================================================= */}
-
+            {/* PAYMENT DETAILS */}
             <table className="w-full mb-6">
-
               <thead>
-
                 <tr className="bg-gray-100">
-
-                  <th className="p-3 text-left border-b">
-                    Description
-                  </th>
-
-                  <th className="p-3 text-right border-b">
-                    Amount (KSh)
-                  </th>
-
+                  <th className="p-3 text-left border-b">Description</th>
+                  <th className="p-3 text-right border-b">Amount (KSh)</th>
                 </tr>
-
               </thead>
-
               <tbody>
-
                 <tr>
-
                   <td className="p-3 border-b">
                     {receiptData.payment_description || receiptData.description || "Term Fee Payment"}
                   </td>
-
                   <td className="p-3 border-b text-right font-bold text-lg text-green-700">
                     {formatMoney(getAmount(receiptData))}
                   </td>
-
                 </tr>
-
               </tbody>
-
             </table>
 
-            {/* =================================================
-                NOTES
-            ================================================= */}
-
+            {/* NOTES */}
             <div className="mb-6">
-
               {receiptData.notes && (
                 <p className="text-sm text-gray-600 mb-4">
                   Notes: {receiptData.notes}
                 </p>
               )}
-
               <p className="text-sm text-green-700 font-medium">
-                ✅ Payment Received Successfully
+                Payment Received Successfully
               </p>
-
             </div>
 
-            {/* =================================================
-                SIGNATURES
-            ================================================= */}
-
+            {/* SIGNATURES */}
             <div className="flex justify-between items-end mt-10 pt-4 border-t">
-
               <div>
-
-                <p className="text-sm text-gray-600">
-                  Received By:
-                </p>
-
+                <p className="text-sm text-gray-600">Received By:</p>
                 <p className="font-medium">
                   {receiptData.received_by || receiptData.collected_by || "Accountant"}
                 </p>
-
                 <div className="border-b border-gray-400 w-48 mt-1"></div>
-
-                <p className="text-xs text-gray-500 mt-1">
-                  Signature & Date
-                </p>
-
+                <p className="text-xs text-gray-500 mt-1">Signature & Date</p>
               </div>
-
               <div className="text-right">
-
-                <p className="text-sm text-gray-600">
-                  Official School Stamp
-                </p>
-
+                <p className="text-sm text-gray-600">Official School Stamp</p>
                 <div className="border-2 border-dashed border-gray-300 w-32 h-20 mt-2"></div>
-
               </div>
-
             </div>
-
           </div>
-
         </>
       )}
-
     </div>
   );
 };

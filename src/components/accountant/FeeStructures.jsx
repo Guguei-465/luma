@@ -38,16 +38,30 @@ const FeeStructures = () => {
   const [success, setSuccess] = useState("");
 
   // ===================================================
-  // FORM
+  // ✅ FORM — MATCHES DJANGO MODEL EXACTLY!
   // ===================================================
 
   const [form, setForm] = useState({
     classroom: "",
     academic_year: "2026",
     term: "",
-    amount: "",
+    tuition_fee: "",     // ✅ Matches Django
+    activity_fee: "",    // ✅ Matches Django
+    exam_fee: "",        // ✅ Matches Django
+    other_fee: "",       // ✅ Matches Django
     description: "",
   });
+
+  // ===================================================
+  // ✅ AUTO-CALCULATE TOTAL FEE
+  // ===================================================
+  const totalFee = useMemo(() => {
+    const tuition = Number(form.tuition_fee) || 0;
+    const activity = Number(form.activity_fee) || 0;
+    const exam = Number(form.exam_fee) || 0;
+    const other = Number(form.other_fee) || 0;
+    return tuition + activity + exam + other;
+  }, [form.tuition_fee, form.activity_fee, form.exam_fee, form.other_fee]);
 
   // ===================================================
   // GET ARRAY FROM RESPONSE
@@ -82,10 +96,6 @@ const FeeStructures = () => {
         api.get("classes/"),
       ]);
 
-      console.log("========================================");
-      console.log("🎓 STUDENT FEES:", studentFeeResponse.data);
-      console.log("========================================");
-
       setFeeStructures(extractArray(feeStructureResponse.data));
       setStudentFees(extractArray(studentFeeResponse.data));
       setClasses(extractArray(classResponse.data));
@@ -118,11 +128,10 @@ const FeeStructures = () => {
   };
 
   // ===================================================
-  // ✅ GET CLASS NAME — DIRECT from classroom field
+  // GET STUDENT CLASS NAME
   // ===================================================
 
   const getStudentClassName = (studentFee) => {
-    // Your API already returns classroom as plain text string!
     if (studentFee.classroom && studentFee.classroom !== "—") {
       return studentFee.classroom;
     }
@@ -130,7 +139,7 @@ const FeeStructures = () => {
   };
 
   // ===================================================
-  // 🎨 UNIQUE CLASS COLORING — each class gets own color
+  // CLASS COLOR MAP
   // ===================================================
 
   const getClassColorMap = useMemo(() => {
@@ -162,7 +171,7 @@ const FeeStructures = () => {
   };
 
   // ===================================================
-  // GET CLASS NAME for FEE STRUCTURES table
+  // GET CLASS NAME for FEE STRUCTURES
   // ===================================================
 
   const getClassName = (item) => {
@@ -188,23 +197,34 @@ const FeeStructures = () => {
   };
 
   // ===================================================
-  // AMOUNT HELPERS
+  // ✅ GET TOTAL FEE FROM DJANGO RESPONSE
   // ===================================================
 
-  const getAmount = (fee) => {
+  const getTotalFee = (fee) => {
+    // Django auto-calculates total_fee — use that!
+    if (fee.total_fee) return Number(fee.total_fee);
+    // Fallback: sum individual fields
     return (
-      fee.amount ??
-      fee.fee_amount ??
-      fee.total_amount ??
-      fee.total_fee ??
-      fee.amount_due ??
-      fee.expected_amount ??
-      0
+      Number(fee.tuition_fee || 0) +
+      Number(fee.activity_fee || 0) +
+      Number(fee.exam_fee || 0) +
+      Number(fee.other_fee || 0)
     );
   };
 
   // ===================================================
-  // CREATE FEE STRUCTURE
+  // ✅ CHECK DUPLICATE BEFORE SUBMIT
+  // ===================================================
+  const findDuplicateFeeStructure = (classroomId, year, termName) => {
+    return feeStructures.find(fs =>
+      Number(fs.classroom) === Number(classroomId) &&
+      Number(fs.academic_year) === Number(year) &&
+      fs.term === termName
+    );
+  };
+
+  // ===================================================
+  // ✅ CREATE FEE STRUCTURE — PERFECT FIELD NAMES!
   // ===================================================
 
   const handleSubmit = async (e) => {
@@ -216,34 +236,59 @@ const FeeStructures = () => {
     if (!form.academic_year) { setError("Please enter the academic year."); return; }
     if (!form.term) { setError("Please select a term."); return; }
 
-    const amount = Number(form.amount);
-    if (!form.amount || isNaN(amount) || amount <= 0) {
-      setError("Please enter a valid fee amount greater than zero.");
+    // ✅ At least one fee type must be filled
+    const hasAmount = form.tuition_fee || form.activity_fee || form.exam_fee || form.other_fee;
+    if (!hasAmount) {
+      setError("Please enter at least one fee amount.");
+      return;
+    }
+
+    // ✅ PREVENT DUPLICATE
+    const duplicate = findDuplicateFeeStructure(form.classroom, form.academic_year, form.term);
+    if (duplicate) {
+      const className = getClassName(duplicate);
+      setError(
+        `⚠️ A Fee Structure already exists for: ${className} | ${form.term} | ${form.academic_year}. ` +
+        "Edit the existing one instead."
+      );
       return;
     }
 
     try {
       setSaving(true);
+
+      // ✅ SENDING EXACT FIELD NAMES FROM YOUR DJANGO MODEL!
       const payload = {
         classroom: Number(form.classroom),
         academic_year: Number(form.academic_year),
         term: form.term,
-        amount: amount,
+        
+        tuition_fee: Number(form.tuition_fee) || 0,
+        activity_fee: Number(form.activity_fee) || 0,
+        exam_fee: Number(form.exam_fee) || 0,
+        other_fee: Number(form.other_fee) || 0,
+        
         description: form.description.trim(),
       };
 
-      console.log("CREATING FEE STRUCTURE:", payload);
+      console.log("📤 CREATING FEE STRUCTURE:", payload);
       const res = await api.post("fees/fee-structures/", payload);
-      console.log("FEE STRUCTURE CREATED:", res.data);
+      console.log("✅ FEE STRUCTURE CREATED:", res.data);
 
-      setSuccess("Fee structure created successfully.");
-      setForm({ classroom: "", academic_year: "2026", term: "", amount: "", description: "" });
+      setSuccess("✅ Fee structure created successfully.");
+      setForm({ classroom: "", academic_year: "2026", term: "", tuition_fee: "", activity_fee: "", exam_fee: "", other_fee: "", description: "" });
       await loadData();
 
     } catch (err) {
-      console.error("CREATE ERROR:", err.response?.data || err.message);
+      console.error("❌ CREATE ERROR:", err.response?.data || err.message);
+
       const data = err.response?.data;
-      if (typeof data === "string") setError(data);
+      if (data?.non_field_errors) {
+        setError(
+          "⚠️ This Fee Structure already exists! " +
+          "Same Class, Year & Term is not allowed."
+        );
+      } else if (typeof data === "string") setError(data);
       else if (data?.detail) setError(data.detail);
       else if (data?.message) setError(data.message);
       else if (data) {
@@ -277,7 +322,7 @@ const FeeStructures = () => {
     try {
       const res = await api.post(`fees/fee-structures/${feeStructure.id}/generate_accounts/`);
       console.log("GENERATE RESPONSE:", res.data);
-      setSuccess(res.data?.message || "Student fee accounts generated successfully.");
+      setSuccess(res.data?.message || "✅ Student fee accounts generated successfully.");
       await loadData();
     } catch (err) {
       console.error("GENERATE ERROR:", err.response?.data || err.message);
@@ -300,7 +345,7 @@ const FeeStructures = () => {
     try {
       setError(""); setSuccess("");
       await api.delete(`fees/fee-structures/${fee.id}/`);
-      setSuccess("Fee structure deleted successfully.");
+      setSuccess("✅ Fee structure deleted successfully.");
       await loadData();
     } catch (err) {
       console.error("DELETE ERROR:", err.response?.data || err.message);
@@ -315,10 +360,10 @@ const FeeStructures = () => {
   const totalFeeStructures = feeStructures.length;
   const totalStudentAccounts = studentFees.length;
   const totalExpected = studentFees.reduce(
-    (sum, sf) => sum + Number(sf.total_fee ?? sf.total_expected ?? sf.amount ?? 0), 0
+    (sum, sf) => sum + Number(sf.total_fee ?? sf.total_expected ?? 0), 0
   );
   const totalPaid = studentFees.reduce(
-    (sum, sf) => sum + Number(sf.amount_paid ?? sf.total_paid ?? sf.paid ?? 0), 0
+    (sum, sf) => sum + Number(sf.amount_paid ?? sf.total_paid ?? 0), 0
   );
   const totalBalance = totalExpected - totalPaid;
 
@@ -369,6 +414,8 @@ const FeeStructures = () => {
       <div className="bg-white rounded-xl shadow-sm p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-6">Create Fee Structure</h2>
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          
+          {/* Class & Year */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Class *</label>
             <select
@@ -404,6 +451,7 @@ const FeeStructures = () => {
             />
           </div>
 
+          {/* Term */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Term *</label>
             <select
@@ -420,21 +468,72 @@ const FeeStructures = () => {
             </select>
           </div>
 
+          {/* Auto-Calculated Total */}
+          <div className="flex items-end">
+            <div className="w-full bg-green-50 rounded-lg px-4 py-3 border border-green-200">
+              <label className="block text-sm font-medium text-green-700 mb-1">Total Fee (Auto)</label>
+              <p className="text-xl font-bold text-green-700">{formatMoney(totalFee)}</p>
+            </div>
+          </div>
+
+          {/* Fee Type Fields */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Fee Amount (KES) *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tuition Fee (KES)</label>
             <input
               type="number"
-              name="amount"
-              value={form.amount}
+              name="tuition_fee"
+              value={form.tuition_fee}
               onChange={handleChange}
-              min="1"
-              step="0.01"
-              required
-              placeholder="30000"
+              min="0"
+              step="1"
+              placeholder="e.g. 20000"
               className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Activity Fee (KES)</label>
+            <input
+              type="number"
+              name="activity_fee"
+              value={form.activity_fee}
+              onChange={handleChange}
+              min="0"
+              step="1"
+              placeholder="e.g. 5000"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Exam Fee (KES)</label>
+            <input
+              type="number"
+              name="exam_fee"
+              value={form.exam_fee}
+              onChange={handleChange}
+              min="0"
+              step="1"
+              placeholder="e.g. 3000"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Other Fee (KES)</label>
+            <input
+              type="number"
+              name="other_fee"
+              value={form.other_fee}
+              onChange={handleChange}
+              min="0"
+              step="1"
+              placeholder="e.g. 1000"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+
+          {/* Description */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
             <textarea
@@ -447,6 +546,7 @@ const FeeStructures = () => {
             />
           </div>
 
+          {/* Submit Button */}
           <div className="md:col-span-2">
             <button
               type="submit"
@@ -463,45 +563,53 @@ const FeeStructures = () => {
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-800">Existing Fee Structures</h2>
-          <p className="text-sm text-gray-500 mt-1">Fee structures loaded from the fee-structures endpoint.</p>
+          <p className="text-sm text-gray-500 mt-1">
+            ✅ You cannot create duplicates — same Class + Year + Term is not allowed.
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-100">
               <tr>
-                <th className="text-left px-6 py-4">#</th>
-                <th className="text-left px-6 py-4">Class</th>
-                <th className="text-left px-6 py-4">Academic Year</th>
-                <th className="text-left px-6 py-4">Term</th>
-                <th className="text-left px-6 py-4">Amount</th>
-                <th className="text-left px-6 py-4">Actions</th>
+                <th className="text-left px-4 py-3">#</th>
+                <th className="text-left px-4 py-3">Class</th>
+                <th className="text-left px-4 py-3">Year</th>
+                <th className="text-left px-4 py-3">Term</th>
+                <th className="text-left px-4 py-3">Tuition</th>
+                <th className="text-left px-4 py-3">Activity</th>
+                <th className="text-left px-4 py-3">Exam</th>
+                <th className="text-left px-4 py-3">Total</th>
+                <th className="text-left px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
               {feeStructures.length === 0 ? (
-                <tr><td colSpan="6" className="text-center py-12 text-gray-500">No fee structures found.</td></tr>
+                <tr><td colSpan="9" className="text-center py-12 text-gray-500">No fee structures found.</td></tr>
               ) : (
                 feeStructures.map((fee, index) => (
                   <tr key={fee.id} className="border-t hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium">{index + 1}</td>
-                    <td className="px-6 py-4"><span className="font-semibold text-gray-800">{getClassName(fee)}</span></td>
-                    <td className="px-6 py-4">{fee.academic_year || "—"}</td>
-                    <td className="px-6 py-4">{fee.term || "—"}</td>
-                    <td className="px-6 py-4"><span className="font-semibold text-green-600">{formatMoney(getAmount(fee))}</span></td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-2">
+                    <td className="px-4 py-3 font-medium">{index + 1}</td>
+                    <td className="px-4 py-3 font-semibold">{getClassName(fee)}</td>
+                    <td className="px-4 py-3">{fee.academic_year || "—"}</td>
+                    <td className="px-4 py-3">{fee.term || "—"}</td>
+                    <td className="px-4 py-3">{formatMoney(fee.tuition_fee)}</td>
+                    <td className="px-4 py-3">{formatMoney(fee.activity_fee)}</td>
+                    <td className="px-4 py-3">{formatMoney(fee.exam_fee)}</td>
+                    <td className="px-4 py-3 font-bold text-green-600">{formatMoney(getTotalFee(fee))}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
                         <button
                           type="button"
                           onClick={() => generateAccounts(fee)}
                           disabled={generating === fee.id}
-                          className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm font-semibold"
+                          className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white text-sm"
                         >
-                          {generating === fee.id ? "Generating..." : "Generate Accounts"}
+                          {generating === fee.id ? "..." : "Accounts"}
                         </button>
                         <button
                           type="button"
                           onClick={() => deleteFeeStructure(fee)}
-                          className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold"
+                          className="px-3 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-sm"
                         >
                           Delete
                         </button>
@@ -515,11 +623,11 @@ const FeeStructures = () => {
         </div>
       </div>
 
-      {/* ✅ STUDENT FEE ACCOUNTS — Class DIRECT from classroom field + 🎨 Unique Colors */}
+      {/* STUDENT FEE ACCOUNTS */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-800">Student Fee Accounts</h2>
-          <p className="text-sm text-gray-500 mt-1">Class names show directly from records, each class has its own color ✅</p>
+          <p className="text-sm text-gray-500 mt-1">Class names show directly from records.</p>
         </div>
         {studentFees.length === 0 ? (
           <div className="p-10 text-center text-gray-500">No student fee accounts found.</div>
@@ -528,37 +636,36 @@ const FeeStructures = () => {
             <table className="w-full text-sm">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="text-left px-6 py-4">#</th>
-                  <th className="text-left px-6 py-4">Student</th>
-                  <th className="text-left px-6 py-4">Class</th>
-                  <th className="text-left px-6 py-4">Term</th>
-                  <th className="text-left px-6 py-4">Expected</th>
-                  <th className="text-left px-6 py-4">Paid</th>
-                  <th className="text-left px-6 py-4">Balance</th>
+                  <th className="text-left px-4 py-3">#</th>
+                  <th className="text-left px-4 py-3">Student</th>
+                  <th className="text-left px-4 py-3">Class</th>
+                  <th className="text-left px-4 py-3">Term</th>
+                  <th className="text-left px-4 py-3">Total Fee</th>
+                  <th className="text-left px-4 py-3">Paid</th>
+                  <th className="text-left px-4 py-3">Balance</th>
                 </tr>
               </thead>
               <tbody>
                 {studentFees.map((studentFee, index) => {
-                  const expected = Number(studentFee.total_fee ?? studentFee.total_expected ?? studentFee.amount ?? 0);
-                  const paid = Number(studentFee.amount_paid ?? studentFee.total_paid ?? studentFee.paid ?? 0);
+                  const expected = Number(studentFee.total_fee ?? studentFee.total_expected ?? 0);
+                  const paid = Number(studentFee.amount_paid ?? studentFee.total_paid ?? 0);
                   const balance = Number(studentFee.balance ?? expected - paid);
                   const className = getStudentClassName(studentFee);
                   const colorClass = getClassColorMap[studentFee.classroom] || "bg-gray-100 text-gray-800";
 
                   return (
                     <tr key={studentFee.id} className="border-t hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium">{index + 1}</td>
-                      <td className="px-6 py-4 font-semibold">{studentFee.student_name || "—"}</td>
-                      {/*  COLORED CLASS BADGE */}
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${colorClass}`}>
+                      <td className="px-4 py-3 font-medium">{index + 1}</td>
+                      <td className="px-4 py-3 font-semibold">{studentFee.student_name || "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
                           {className}
                         </span>
                       </td>
-                      <td className="px-6 py-4">{getTerm(studentFee)}</td>
-                      <td className="px-6 py-4">{formatMoney(expected)}</td>
-                      <td className="px-6 py-4 text-green-600 font-semibold">{formatMoney(paid)}</td>
-                      <td className="px-6 py-4 text-red-600 font-semibold">{formatMoney(balance)}</td>
+                      <td className="px-4 py-3">{getTerm(studentFee)}</td>
+                      <td className="px-4 py-3 font-semibold">{formatMoney(expected)}</td>
+                      <td className="px-4 py-3 text-green-600 font-semibold">{formatMoney(paid)}</td>
+                      <td className="px-4 py-3 text-red-600 font-semibold">{formatMoney(balance)}</td>
                     </tr>
                   );
                 })}
