@@ -465,7 +465,7 @@ const StudentAttendance = () => {
                 </div>
 
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-50 text-sm">
-                  📅
+                
                 </div>
               </div>
             </div>
@@ -483,7 +483,7 @@ const StudentAttendance = () => {
                 </div>
 
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-sm">
-                  ✓
+                  
                 </div>
               </div>
             </div>
