@@ -86,6 +86,8 @@ import AcademicTeacherProfile from "./components/academiccoordinator/AcademicTea
 import AcademicCoordinatorResults from "./components/academiccoordinator/AcademicCoordinatorResults";
 import ParentChildren from "./components/admin/ParentChildren";
 import StudentAttendance from "./components/academiccoordinator/StudentAttendance";
+import AcademicCoordinatorWorkload from "./components/academiccoordinator/AcademicCoordinatorWorkload";
+ 
 
 function App() {
   return (
@@ -159,6 +161,7 @@ function App() {
             <Route path="student-details/:id" element={<CoordinatorStudentDetails />} />
             <Route path="student-results/:id" element={<StudentResults />} />          
             <Route path="attendance/:id" element={<StudentAttendance />} />          
+                   
 
             {/* Reports */}
             <Route path="reports" element={<CoordinatorReports />} />
@@ -168,6 +171,7 @@ function App() {
 
             {/* Teachers */}
             <Route path="teachers" element={<CoordinatorTeachers />} />
+            <Route path="workload" element={<AcademicCoordinatorWorkload />} />
             <Route path="teachers/:teacherId" element={<AcademicTeacherProfile />} />
 
             {/* Subjects & Classes */}
@@ -241,24 +245,28 @@ function App() {
             <Route path="profile" element={<ParentProfile />} />
           </Route>
 
-          <Route
-            path="/teacher"
-            element={
-              <ProtectedRoutes allowedRoles={["teacher"]}>
-                <TeacherLayout />
-              </ProtectedRoutes>
-            }
-          >
-            <Route index element={<TeacherDashboard />} />
-            <Route path="students" element={<TeacherStudents />} />
-            <Route path="assessments" element={<TeacherAssessments />} />
-            <Route path="assessments/:assessment_id/marks" element={<TeacherMarksEntry />} />
-            <Route path="results" element={<TeacherResults />} />
-            <Route path="attendance" element={<TeacherAttendance />} />
-            <Route path="timetable" element={<TeacherTimetable />} />
-            <Route path="reports" element={<TeacherReports />} />
-            <Route path="profile" element={<TeacherProfile />} />
-          </Route>
+         <Route
+          path="/teacher"
+          element={
+            <ProtectedRoutes allowedRoles={["teacher"]}>
+              <TeacherLayout />
+            </ProtectedRoutes>
+          }
+        >
+          <Route index element={<TeacherDashboard />} />
+          
+           
+          
+          <Route path="students" element={<TeacherStudents />} />
+          <Route path="assessments" element={<TeacherAssessments />} />
+          <Route path="assessments/:id" element={<TeacherAssessments />} />
+          <Route path="assessments/:assessment_id/marks" element={<TeacherMarksEntry />} />
+          <Route path="results" element={<TeacherResults />} />
+          <Route path="attendance" element={<TeacherAttendance />} />
+          <Route path="timetable" element={<TeacherTimetable />} />
+          <Route path="reports" element={<TeacherReports />} />
+          <Route path="profile" element={<TeacherProfile />} />
+        </Route>
 
           
 

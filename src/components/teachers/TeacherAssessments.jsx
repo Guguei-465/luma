@@ -2,43 +2,20 @@ import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/api";
 
+
 // =====================================================
-// HELPERS — same as used in attendance/students
+// HELPERS
 // =====================================================
 const getArray = (data) => {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.results)) return data.results;
   if (Array.isArray(data?.data)) return data.data;
-  if (Array.isArray(data?.assignments)) return data.assignments;
   return [];
 };
 
-const firstValue = (...values) => {
-  for (const value of values) {
-    if (value !== undefined && value !== null && value !== "") return value;
-  }
-  return null;
-};
-
-const isTrue = (value) => {
-  return (
-    value === true || value === 1 || value === "1" ||
-    value === "true" || value === "True" || value === "TRUE"
-  );
-};
-
-const getClassName = (classroom) => {
-  if (!classroom) return "Class";
-  if (classroom.grade && classroom.stream) return `${classroom.grade} ${classroom.stream}`;
-  if (classroom.grade) return classroom.grade;
-  return (
-    firstValue(classroom.name, classroom.class_name, classroom.classroom_name) ||
-    `Class ${classroom.id || ""}`
-  );
-};
 
 // =====================================================
-// SPINNERS
+// SPINNER
 // =====================================================
 const Spinner = () => (
   <div className="flex justify-center items-center h-80">
@@ -46,93 +23,120 @@ const Spinner = () => (
   </div>
 );
 
-const ButtonSpinner = () => (
-  <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-);
 
 // =====================================================
-// MAIN COMPONENT
+// MAIN COMPONENT — BUTTON ALWAYS CLICKABLE
 // =====================================================
 const TeacherAssessments = () => {
-  const [assignments, setAssignments] = useState([]);
   const [classOptions, setClassOptions] = useState([]);
   const [subjectOptions, setSubjectOptions] = useState([]);
+  const [allAssignments, setAllAssignments] = useState([]);
+  const [classStudentCounts, setClassStudentCounts] = useState({});
 
   const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
 
   const [assessments, setAssessments] = useState([]);
-  const [loadingAssignments, setLoadingAssignments] = useState(true);
+  const [filteredAssessments, setFilteredAssessments] = useState([]);
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
   const [loadingAssessments, setLoadingAssessments] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [loadingStudents, setLoadingStudents] = useState(false);
   const [error, setError] = useState("");
 
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    assessment_type: "",
-    max_score: 50,
-  });
 
   // =====================================================
-  // FETCH TEACHER ASSIGNMENTS (classes + subjects)
+  // LOAD STUDENT COUNT FOR SELECTED CLASS
   // =====================================================
-  const fetchAssignments = useCallback(async () => {
+  const loadStudentCountForClass = useCallback(async (classId) => {
+    if (!classId) return;
+    if (classStudentCounts[classId] !== undefined) return;
+
     try {
-      setLoadingAssignments(true);
+      setLoadingStudents(true);
+      const { data } = await api.get(`students/?classroom=${classId}`);
+      const list = getArray(data);
+      const count = list.length;
+      setClassStudentCounts((prev) => ({ ...prev, [classId]: count }));
+      console.log(`📊 Class ${classId} has ${count} student(s)`);
+    } catch (err) {
+      console.error("❌ Failed to load student count:", err.message);
+      setClassStudentCounts((prev) => ({ ...prev, [classId]: -1 }));
+    } finally {
+      setLoadingStudents(false);
+    }
+  }, [classStudentCounts]);
+
+
+  // =====================================================
+  // LOAD ASSIGNMENTS → BUILD CLASSES & SUBJECTS
+  // =====================================================
+  const fetchDashboard = useCallback(async () => {
+    try {
+      setLoadingDashboard(true);
       setError("");
 
-      const { data } = await api.get("assignments/");
-      const allAssignments = getArray(data).filter(
-        (a) => a && a.id && a.is_active !== false && a.is_active !== "false" && a.is_active !== 0
-      );
+      let assignments = [];
+      try {
+        console.log("📌 Trying dedicated assignments endpoint...");
+        const { data: listData } = await api.get("assignments/");
+        assignments = getArray(listData);
+        console.log("✅ From assignments list:", assignments);
+      } catch (listErr) {
+        console.log("⚠️ Assignments list failed, trying dashboard...");
+        const { data: dashboardData } = await api.get("dashboard/teacher/");
+        assignments = getArray(dashboardData.assignments || dashboardData.assigned_assignments || []);
+      }
 
-      setAssignments(allAssignments);
+      setAllAssignments(assignments);
+      console.log("✅ Final assignments list:", assignments);
 
-      // Extract unique classes
+      // Build unique classes
       const uniqueClasses = [];
       const seenClassIds = new Set();
-      allAssignments.forEach((a) => {
-        const cId = a.classroom?.id || a.classroom_id;
+      assignments.forEach((a) => {
+        const cId = a.classroom || a.classroom_id;
         if (cId && !seenClassIds.has(String(cId))) {
           seenClassIds.add(String(cId));
           uniqueClasses.push({
-            id: cId,
-            name: a.classroom_name || getClassName(a.classroom),
-            classroom: a.classroom,
+            id: String(cId),
+            name: a.classroom_name || a.class_name || `Class ${cId}`,
           });
         }
       });
       setClassOptions(uniqueClasses);
+      console.log("✅ Unique classes:", uniqueClasses);
 
-      // Extract unique subjects
+      // Build unique subjects
       const uniqueSubjects = [];
       const seenSubjectIds = new Set();
-      allAssignments.forEach((a) => {
-        const sId = a.subject?.id || a.subject_id;
+      assignments.forEach((a) => {
+        const sId = a.subject || a.subject_id;
         if (sId && !seenSubjectIds.has(String(sId))) {
           seenSubjectIds.add(String(sId));
           uniqueSubjects.push({
-            id: sId,
-            name: a.subject_name || a.subject?.name || `Subject ${sId}`,
+            id: String(sId),
+            name: a.subject_name || a.subject || `Subject ${sId}`,
           });
         }
       });
       setSubjectOptions(uniqueSubjects);
+      console.log("✅ Unique subjects:", uniqueSubjects);
     } catch (err) {
-      console.error("❌ Assignments error:", err.response?.data || err.message);
+      console.error("❌ Dashboard error:", err.response?.data || err.message);
       setError("Failed to load your classes and subjects.");
     } finally {
-      setLoadingAssignments(false);
+      setLoadingDashboard(false);
     }
   }, []);
 
+
   // =====================================================
-  // FETCH ASSESSMENTS
+  // FETCH + FRONTEND-FILTER ASSESSMENTS
   // =====================================================
   const fetchAssessments = useCallback(async () => {
     if (!selectedClassId || !selectedSubjectId) {
       setAssessments([]);
+      setFilteredAssessments([]);
       return;
     }
 
@@ -140,105 +144,107 @@ const TeacherAssessments = () => {
       setLoadingAssessments(true);
       setError("");
 
-      const { data } = await api.get(
-        `results/assessments/?class_id=${selectedClassId}&subject_id=${selectedSubjectId}`
-      );
+      let url = `results/assessments/?classroom=${selectedClassId}&subject=${selectedSubjectId}`;
+      console.log("📤 Fetching assessments:", url);
 
-      setAssessments(getArray(data));
+      let response;
+      try {
+        response = await api.get(url);
+      } catch {
+        url = `results/assessments/?classroom_id=${selectedClassId}&subject_id=${selectedSubjectId}`;
+        console.log("📤 Retrying with:", url);
+        response = await api.get(url);
+      }
+
+      const list = getArray(response.data);
+      console.log("📥 Backend returned:", list.length, "assessments");
+
+      const filtered = list.filter((a) => {
+        const aClass = String(a.classroom || a.classroom_id || "");
+        const aSubject = String(a.subject || a.subject_id || "");
+        return aClass === selectedClassId && aSubject === selectedSubjectId;
+      });
+
+      setAssessments(list);
+      setFilteredAssessments(filtered);
+      console.log("✅ After filtering:", filtered.length, "assessments match your selection");
     } catch (err) {
       console.error("❌ Assessments error:", err.response?.data || err.message);
       setError("Failed to load assessments.");
       setAssessments([]);
+      setFilteredAssessments([]);
     } finally {
       setLoadingAssessments(false);
     }
   }, [selectedClassId, selectedSubjectId]);
 
-  // =====================================================
-  // CREATE ASSESSMENT
-  // =====================================================
-  const createAssessment = async (e) => {
-    e.preventDefault();
-    if (!selectedClassId || !selectedSubjectId || !formData.name.trim()) return;
-
-    try {
-      setSaving(true);
-      setError("");
-
-      await api.post("results/assessments/", {
-        class_id: selectedClassId,
-        subject_id: selectedSubjectId,
-        name: formData.name.trim(),
-        assessment_type: formData.assessment_type,
-        max_score: Number(formData.max_score) || 50,
-      });
-
-      setFormData({ name: "", assessment_type: "", max_score: 50 });
-      setShowForm(false);
-      fetchAssessments(); // Refresh list
-    } catch (err) {
-      console.error("❌ Create assessment error:", err.response?.data || err.message);
-      setError("Failed to create assessment. Check your input.");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // =====================================================
   // EFFECTS
   // =====================================================
   useEffect(() => {
-    fetchAssignments();
-  }, [fetchAssignments]);
+    fetchDashboard();
+  }, [fetchDashboard]);
 
   useEffect(() => {
     fetchAssessments();
-  }, [fetchAssessments]);
+  }, [selectedClassId, selectedSubjectId, fetchAssessments]);
+
+  useEffect(() => {
+    if (selectedClassId) {
+      loadStudentCountForClass(selectedClassId);
+    }
+  }, [selectedClassId, loadStudentCountForClass]);
+
 
   // =====================================================
   // LOADING
   // =====================================================
-  if (loadingAssignments) return <Spinner />;
+  if (loadingDashboard) return <Spinner />;
+
 
   // =====================================================
   // RENDER
   // =====================================================
+  const studentCount = selectedClassId ? (classStudentCounts[selectedClassId] ?? null) : null;
+  const hasStudents = studentCount !== null && studentCount > 0;
+
   return (
     <div className="p-4 md:p-6 space-y-6 bg-gray-50 min-h-screen">
       {/* HEADER */}
-      <div className="card">
+      <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
         <h1 className="text-xl md:text-2xl font-bold text-gray-800">Assessments & Marks</h1>
         <p className="text-gray-500 mt-1 text-sm">
-          Create assessments and enter student marks for your assigned classes
+          Select your class and subject to view assessments and enter marks
         </p>
       </div>
 
       {/* ERROR */}
       {error && (
-        <div className="card bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
           {error}
         </div>
       )}
 
-      {/* NO ASSIGNMENTS */}
-      {classOptions.length === 0 && (
-        <div className="card text-center py-10 text-gray-500">
+      {/* NO CLASSES */}
+      {classOptions.length === 0 && !error && (
+        <div className="bg-white rounded-lg shadow-sm p-6 text-center text-gray-500">
           No classes assigned to you yet.
         </div>
       )}
 
       {/* FILTERS */}
       {classOptions.length > 0 && (
-        <div className="card grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="form-lable block mb-1">Select Class</label>
+            <label className="block mb-1 font-medium text-gray-700">Select Class</label>
             <select
-              className="milk-input w-full"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-green-600"
               value={selectedClassId}
               onChange={(e) => {
                 setSelectedClassId(e.target.value);
-                setSelectedSubjectId(""); // reset subject on class change
-                setAssessments([]);
+                setSelectedSubjectId("");
+                setFilteredAssessments([]);
               }}
             >
               <option value="">-- Choose Class --</option>
@@ -251,9 +257,9 @@ const TeacherAssessments = () => {
           </div>
 
           <div>
-            <label className="form-lable block mb-1">Select Subject</label>
+            <label className="block mb-1 font-medium text-gray-700">Select Subject</label>
             <select
-              className="milk-input w-full"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-green-600"
               value={selectedSubjectId}
               onChange={(e) => setSelectedSubjectId(e.target.value)}
               disabled={!selectedClassId}
@@ -261,13 +267,13 @@ const TeacherAssessments = () => {
               <option value="">-- Choose Subject --</option>
               {subjectOptions
                 .filter((s) => {
-                  // Only show subjects taught in selected class
                   if (!selectedClassId) return true;
-                  return assignments.some(
+                  const assignment = allAssignments.find(
                     (a) =>
-                      String(a.classroom?.id || a.classroom_id) === String(selectedClassId) &&
-                      String(a.subject?.id || a.subject_id) === String(s.id)
+                      String(a.classroom || a.classroom_id) === selectedClassId &&
+                      String(a.subject || a.subject_id) === s.id
                   );
+                  return !!assignment;
                 })
                 .map((s) => (
                   <option key={s.id} value={s.id}>
@@ -279,115 +285,70 @@ const TeacherAssessments = () => {
         </div>
       )}
 
-      {/* CREATE FORM */}
-      {selectedClassId && selectedSubjectId && (
-        <div className="card">
-          {!showForm ? (
-            <button className="milk-btn" onClick={() => setShowForm(true)}>
-              + Create New Assessment
-            </button>
-          ) : (
-            <form onSubmit={createAssessment} className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800">New Assessment</h3>
-              <div>
-                <label className="form-lable block mb-1">Assessment Name *</label>
-                <input
-                  type="text"
-                  className="milk-input w-full"
-                  placeholder="e.g. End of Term Exam"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData((p) => ({ ...p, name: e.target.value }))
-                  }
-                  required
-                />
-              </div>
-              <div>
-                <label className="form-lable block mb-1">Type</label>
-                <select
-                  className="milk-input w-full"
-                  value={formData.assessment_type}
-                  onChange={(e) =>
-                    setFormData((p) => ({ ...p, assessment_type: e.target.value }))
-                  }
-                >
-                  <option value="">-- Select Type --</option>
-                  <option value="exam">Exam</option>
-                  <option value="test">Test</option>
-                  <option value="assignment">Assignment</option>
-                </select>
-              </div>
-              <div>
-                <label className="form-lable block mb-1">Maximum Score</label>
-                <input
-                  type="number"
-                  className="milk-input w-full"
-                  value={formData.max_score}
-                  onChange={(e) =>
-                    setFormData((p) => ({ ...p, max_score: e.target.value }))
-                  }
-                  min="1"
-                />
-              </div>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  className="bg-gray-200 text-gray-800 px-4 py-3 rounded-lg font-medium hover:bg-gray-300"
-                  onClick={() => setShowForm(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="milk-btn" disabled={saving}>
-                  {saving && <ButtonSpinner />} Save
-                </button>
-              </div>
-            </form>
-          )}
+      {/* ⚠️ STUDENT COUNT WARNING — INFO ONLY, BUTTON STILL CLICKS */}
+      {selectedClassId && studentCount !== null && !loadingStudents && (
+        <div className={`p-3 rounded-lg text-sm ${hasStudents ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-800 border border-amber-200"}`}>
+          {hasStudents
+            ? `✅ This class has ${studentCount} student(s). Ready to enter marks!`
+            : `⚠️ This class has NO enrolled students yet. You may still click Enter Marks to verify.`}
         </div>
       )}
 
       {/* ASSESSMENT LIST */}
-      <div className="card">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Assessments</h2>
+      {classOptions.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+            Assessments {filteredAssessments.length > 0 && `(${filteredAssessments.length})`}
+          </h2>
 
-        {!selectedClassId || !selectedSubjectId ? (
-          <p className="text-gray-500 text-center py-8">
-            Select class and subject to view assessments.
-          </p>
-        ) : loadingAssessments ? (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-          </div>
-        ) : assessments.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">
-            No assessments found. Create one above.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {assessments.map((a) => (
-              <div
-                key={a.id}
-                className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border border-gray-200 rounded-lg p-4 hover:bg-gray-50"
-              >
-                <div>
-                  <h4 className="font-semibold text-gray-800">
-                    {a.name || "Untitled Assessment"}
-                  </h4>
-                  <p className="text-sm text-gray-500 capitalize">
-                    {a.assessment_type || "General"} • Max Score: {a.max_score || "—"}
-                  </p>
-                </div>
-                <Link
-                  to={`/teacher/assessments/${a.id}/marks`}
-                  className="milk-btn whitespace-nowrap text-center"
+          {!selectedClassId || !selectedSubjectId ? (
+            <p className="text-gray-500 text-center py-8">
+              Select class and subject above to view assessments.
+            </p>
+          ) : loadingAssessments ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            </div>
+          ) : filteredAssessments.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">
+              No assessments found. They are created by Academic Coordinator.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {filteredAssessments.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border border-gray-200 rounded-lg p-4 hover:bg-gray-50"
                 >
-                  Enter Marks
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">
+                      {a.name || "Untitled Assessment"}
+                    </h4>
+                    <p className="text-sm text-gray-500">
+                      {a.assessment_type || "General"}
+                      {a.total_marks ? ` • Max: ${a.total_marks}` : ""}
+                      {a.term && ` • ${a.term}`}
+                      {a.academic_year && ` / ${a.academic_year}`}
+                    </p>
+                  </div>
+
+                  {/* ✅ BUTTON ALWAYS CLICKABLE — GREEN FOR ALL! */}
+                  <Link
+                    to={`/teacher/assessments/${a.id}/marks`}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap text-center ${
+                      hasStudents
+                        ? "bg-green-600 text-white hover:bg-green-700"
+                        : "bg-amber-500 text-white hover:bg-amber-600"
+                    }`}
+                  >
+                    Enter Marks
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
