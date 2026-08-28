@@ -85,6 +85,7 @@ import FeeStructures from "./components/accountant/FeeStructures";
 import AcademicTeacherProfile from "./components/academiccoordinator/AcademicTeacherProfile";
 import AcademicCoordinatorResults from "./components/academiccoordinator/AcademicCoordinatorResults";
 import ParentChildren from "./components/admin/ParentChildren";
+import StudentAttendance from "./components/academiccoordinator/StudentAttendance";
 
 function App() {
   return (
@@ -157,6 +158,7 @@ function App() {
             <Route path="students" element={<CoordinatorStudents />} />
             <Route path="student-details/:id" element={<CoordinatorStudentDetails />} />
             <Route path="student-results/:id" element={<StudentResults />} />          
+            <Route path="attendance/:id" element={<StudentAttendance />} />          
 
             {/* Reports */}
             <Route path="reports" element={<CoordinatorReports />} />

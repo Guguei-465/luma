@@ -41,17 +41,7 @@ const AcademicCoDashboard = () => {
 
     const data = response.data;
 
-    // -------------------------------------------------
     // DRF PAGINATED RESPONSE
-    // Example:
-    // {
-    //   count: 20,
-    //   next: "...",
-    //   previous: null,
-    //   results: [...]
-    // }
-    // -------------------------------------------------
-
     if (
       typeof data === "object" &&
       typeof data.count === "number"
@@ -59,18 +49,12 @@ const AcademicCoDashboard = () => {
       return data.count;
     }
 
-    // -------------------------------------------------
     // NORMAL ARRAY RESPONSE
-    // -------------------------------------------------
-
     if (Array.isArray(data)) {
       return data.length;
     }
 
-    // -------------------------------------------------
     // OBJECT WITH RESULTS ARRAY
-    // -------------------------------------------------
-
     if (
       typeof data === "object" &&
       Array.isArray(data.results)
@@ -92,12 +76,7 @@ const AcademicCoDashboard = () => {
       console.log(
         "===================================="
       );
-
-      console.log(
-        `${label} RESPONSE:`,
-        response.data
-      );
-
+      console.log(`${label} RESPONSE:`, response.data);
       console.log(
         "===================================="
       );
@@ -107,8 +86,7 @@ const AcademicCoDashboard = () => {
       console.error(
         `${label} FAILED:`,
         error.response?.status,
-        error.response?.data ||
-          error.message
+        error.response?.data || error.message
       );
 
       return null;
@@ -123,19 +101,6 @@ const AcademicCoDashboard = () => {
     try {
       setError("");
 
-      // =================================================
-      // ONLY USE ENDPOINTS THAT EXIST
-      // =================================================
-      //
-      // Removed:
-      //
-      // results/pending/
-      // results/approved/
-      //
-      // Those endpoints are not registered in the
-      // Django results URLs.
-      // =================================================
-
       const [
         students,
         teachers,
@@ -144,13 +109,10 @@ const AcademicCoDashboard = () => {
         assessments,
         timetable,
       ] = await Promise.all([
-        safeGet(
-          "students/",
-          "STUDENTS"
-        ),
+        safeGet("students/", "STUDENTS"),
 
         safeGet(
-          "assignments/teacher-profile/",
+          "assignments/teachers/",
           "TEACHERS"
         ),
 
@@ -176,73 +138,33 @@ const AcademicCoDashboard = () => {
       ]);
 
       // =================================================
-      // COUNTS
+      // CALCULATE COUNTS
       // =================================================
 
-      const studentCount =
-        getCount(students);
-
-      const teacherCount =
-        getCount(teachers);
-
-      const subjectCount =
-        getCount(subjects);
-
-      const classCount =
-        getCount(classes);
-
-      const assessmentCount =
-        getCount(assessments);
-
-      const timetableCount =
-        getCount(timetable);
+      const studentCount = getCount(students);
+      const teacherCount = getCount(teachers);
+      const subjectCount = getCount(subjects);
+      const classCount = getCount(classes);
+      const assessmentCount = getCount(assessments);
+      const timetableCount = getCount(timetable);
 
       // =================================================
-      // DEBUG
+      // DEBUG OUTPUT
       // =================================================
 
       console.log(
         "===================================="
       );
-
-      console.log(
-        "ACADEMIC DASHBOARD STATS"
-      );
-
+      console.log("ACADEMIC DASHBOARD STATS");
       console.log(
         "===================================="
       );
-
-      console.log(
-        "Students:",
-        studentCount
-      );
-
-      console.log(
-        "Teachers:",
-        teacherCount
-      );
-
-      console.log(
-        "Subjects:",
-        subjectCount
-      );
-
-      console.log(
-        "Classes:",
-        classCount
-      );
-
-      console.log(
-        "Assessments:",
-        assessmentCount
-      );
-
-      console.log(
-        "Timetable:",
-        timetableCount
-      );
-
+      console.log("Students:", studentCount);
+      console.log("Teachers:", teacherCount);
+      console.log("Subjects:", subjectCount);
+      console.log("Classes:", classCount);
+      console.log("Assessments:", assessmentCount);
+      console.log("Timetable:", timetableCount);
       console.log(
         "===================================="
       );
@@ -261,7 +183,7 @@ const AcademicCoDashboard = () => {
       });
 
       // =================================================
-      // SHOW WARNING ONLY IF ALL REQUESTS FAILED
+      // ERROR WARNINGS
       // =================================================
 
       const successfulRequests = [
@@ -310,12 +232,9 @@ const AcademicCoDashboard = () => {
   // ===================================================
 
   const handleRefresh = () => {
-    if (refreshing) {
-      return;
-    }
+    if (refreshing) return;
 
     setRefreshing(true);
-
     loadDashboard();
   };
 
@@ -330,35 +249,30 @@ const AcademicCoDashboard = () => {
       icon: "bi-people-fill",
       color: "blue",
     },
-
     {
       title: "Assigned Teachers",
       value: stats.teachers,
       icon: "bi-person-badge-fill",
       color: "green",
     },
-
     {
       title: "School Subjects",
       value: stats.subjects,
       icon: "bi-book-fill",
       color: "purple",
     },
-
     {
       title: "Active Classes",
       value: stats.classes,
       icon: "bi-building",
       color: "orange",
     },
-
     {
       title: "Assessments",
       value: stats.assessments,
       icon: "bi-clipboard-check-fill",
       color: "cyan",
     },
-
     {
       title: "Timetable Entries",
       value: stats.timetables,
@@ -430,11 +344,9 @@ const AcademicCoDashboard = () => {
       ================================================= */}
 
       <div className="card">
-
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 
           <div>
-
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800">
               Academic Coordinator Dashboard
             </h1>
@@ -442,7 +354,6 @@ const AcademicCoDashboard = () => {
             <p className="text-gray-500 mt-2 text-sm sm:text-base">
               Academic oversight, progress tracking & quality control
             </p>
-
           </div>
 
           <button
@@ -454,20 +365,17 @@ const AcademicCoDashboard = () => {
             {refreshing ? (
               <>
                 <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
-
                 Refreshing...
               </>
             ) : (
               <>
                 <i className="bi bi-arrow-clockwise mr-2"></i>
-
                 Refresh
               </>
             )}
           </button>
 
         </div>
-
       </div>
 
       {/* =================================================
@@ -481,9 +389,7 @@ const AcademicCoDashboard = () => {
 
             <i className="bi bi-exclamation-triangle-fill mt-0.5"></i>
 
-            <span>
-              {error}
-            </span>
+            <span>{error}</span>
 
           </div>
 
@@ -491,10 +397,16 @@ const AcademicCoDashboard = () => {
       )}
 
       {/* =================================================
-          STATISTICS
+          STATISTICS CARDS
+
+          MOBILE       = 1 column
+          SMALL        = 2 columns
+          MEDIUM       = 2 columns
+          LARGE        = 3 columns
+          EXTRA LARGE  = 3 columns
       ================================================= */}
 
-      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
 
         {cards.map((card) => (
           <div
@@ -523,11 +435,9 @@ const AcademicCoDashboard = () => {
                   card.color
                 )}`}
               >
-
                 <i
                   className={`bi ${card.icon} text-lg sm:text-xl`}
                 ></i>
-
               </div>
 
             </div>
@@ -558,17 +468,13 @@ const AcademicCoDashboard = () => {
             <div className="flex items-start gap-3 mb-3">
 
               <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
-
                 <i className="bi bi-building text-lg"></i>
-
               </div>
 
               <div>
-
                 <h2 className="font-semibold text-base sm:text-lg text-gray-800">
                   Classes & Subjects
                 </h2>
-
               </div>
 
             </div>
@@ -600,17 +506,13 @@ const AcademicCoDashboard = () => {
             <div className="flex items-start gap-3 mb-3">
 
               <div className="w-10 h-10 rounded-lg bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0">
-
                 <i className="bi bi-clipboard-check text-lg"></i>
-
               </div>
 
               <div>
-
                 <h2 className="font-semibold text-base sm:text-lg text-gray-800">
                   Results & Assessments
                 </h2>
-
               </div>
 
             </div>
@@ -642,17 +544,13 @@ const AcademicCoDashboard = () => {
             <div className="flex items-start gap-3 mb-3">
 
               <div className="w-10 h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center flex-shrink-0">
-
                 <i className="bi bi-calendar3 text-lg"></i>
-
               </div>
 
               <div>
-
                 <h2 className="font-semibold text-base sm:text-lg text-gray-800">
                   Timetable
                 </h2>
-
               </div>
 
             </div>
@@ -676,7 +574,6 @@ const AcademicCoDashboard = () => {
           </div>
 
         </div>
-
       </div>
 
     </div>

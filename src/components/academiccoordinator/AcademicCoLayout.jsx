@@ -24,7 +24,20 @@ const AcademicCoLayout = () => {
         />
 
         {/* Main Page */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <main
+          className="
+            flex-1
+            overflow-y-auto
+            overflow-x-hidden
+            p-4
+            sm:p-6
+
+            /* Hide scrollbar */
+            [scrollbar-width:none]
+            [-ms-overflow-style:none]
+            [&::-webkit-scrollbar]:hidden
+          "
+        >
           <div className="max-w-7xl mx-auto">
             <Outlet />
           </div>

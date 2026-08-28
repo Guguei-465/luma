@@ -49,8 +49,9 @@ const SideBar = ({ isOpen, setIsOpen }) => {
         `}
       >
         <div className="h-full flex flex-col">
+
           {/* HEADER */}
-          <div className="p-5 border-b border-white/20">
+          <div className="p-5 border-b border-white/20 flex-shrink-0">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold">
                 Luma 2000 Academy
@@ -69,7 +70,19 @@ const SideBar = ({ isOpen, setIsOpen }) => {
           </div>
 
           {/* NAVIGATION */}
-          <div className="flex-1 overflow-y-auto p-5">
+          <div
+            className="
+              flex-1
+              overflow-y-auto
+              overflow-x-hidden
+              p-5
+
+              /* Hide scrollbar */
+              [scrollbar-width:none]
+              [-ms-overflow-style:none]
+              [&::-webkit-scrollbar]:hidden
+            "
+          >
             <nav className="space-y-1">
 
               {/* Dashboard */}

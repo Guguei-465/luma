@@ -696,33 +696,9 @@ const StudentResults = () => {
 
       <div className="flex flex-wrap gap-3">
 
-        <button
-          type="button"
-          onClick={() =>
-            navigate(
-              "/academic-coordinator/students"
-            )
-          }
-          className="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-        >
-          ← Back to Students
-        </button>
+         
 
-        {selectedStudentData && (
-
-          <button
-            type="button"
-            onClick={() =>
-              navigate(
-                `/academic-coordinator/student-details/${selectedStudentData.id}`
-              )
-            }
-            className="px-5 py-2 border border-green-300 rounded-lg text-green-700 hover:bg-green-50"
-          >
-            View Student Profile
-          </button>
-
-        )}
+         
 
       </div>
 
