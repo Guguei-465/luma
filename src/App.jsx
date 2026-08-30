@@ -89,6 +89,7 @@ import StudentAttendance from "./components/academiccoordinator/StudentAttendanc
 import AcademicCoordinatorWorkload from "./components/academiccoordinator/AcademicCoordinatorWorkload";
 import TeacherNotifications from "./components/teachers/TeacherNotifications";
 import TeacherClassResults from "./components/teachers/TeacherClassResults";
+import CoordinatorClassPerformance from "./components/academiccoordinator/CoordinatorClassPerformance";
  
 
 function App() {
@@ -168,6 +169,7 @@ function App() {
             {/* Reports */}
             <Route path="reports" element={<CoordinatorReports />} />
             <Route path="reports/student-progress/:id" element={<CoordinatorReports />} />
+            <Route path="class-performance" element={<CoordinatorClassPerformance />} />
             <Route path="academic-results" element={<AcademicCoordinatorResults />} />
 
 

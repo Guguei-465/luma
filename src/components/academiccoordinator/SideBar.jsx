@@ -171,6 +171,10 @@ const SideBar = ({ isOpen, setIsOpen }) => {
                 Assessments
               </NavLink>
 
+              <NavLink to="/academic-coordinator/class-performance" className={linkClass}>
+                <i className="bi bi-bar-chart-line me-2"></i>
+                Class Performance
+              </NavLink>
 
               <NavLink
                 to="/academic-coordinator/timetable"

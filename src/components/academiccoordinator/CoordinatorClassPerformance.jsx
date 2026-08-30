@@ -7,7 +7,7 @@ import api from "../api/api";
 // =====================================================
 const Spinner = () => (
   <div className="flex justify-center items-center py-12">
-    <div className="animate-spin rounded-full h-10 w-10 border-b-3 border-blue-600"></div>
+    <div className="animate-spin rounded-full h-10 w-10 border-b-3 border-green-600"></div>
   </div>
 );
 
@@ -33,8 +33,7 @@ const safeNumber = (val) => {
 // =====================================================
 // MAIN COMPONENT
 // =====================================================
-const TeacherClassResults = () => {
-  const [assignments, setAssignments] = useState([]);
+const CoordinatorClassPerformance = () => {
   const [classes, setClasses] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [selectedClassId, setSelectedClassId] = useState("");
@@ -46,12 +45,13 @@ const TeacherClassResults = () => {
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [loadingResults, setLoadingResults] = useState(false);
   const [error, setError] = useState("");
+  const [assignments, setAssignments] = useState([]);
 
 
   // ==========================================
-  // LOAD CLASSES FROM ASSIGNMENTS
+  // LOAD ALL CLASSES FROM ASSIGNMENTS
   // ==========================================
-  const loadClasses = useCallback(async () => {
+  const loadAllClasses = useCallback(async () => {
     try {
       setLoadingClasses(true);
       setError("");
@@ -70,8 +70,13 @@ const TeacherClassResults = () => {
           unique.push({ id: cid, name: cname });
         }
       });
+
+      unique.sort((a, b) => a.name.localeCompare(b.name));
       setClasses(unique);
 
+      if (unique.length === 0) {
+        setError("No classes found.");
+      }
     } catch (err) {
       setError("Failed to load classes.");
     } finally {
@@ -110,16 +115,11 @@ const TeacherClassResults = () => {
         const subjName = a.subject_name || "Unknown Subject";
         if (subjId && !seen.has(subjId)) {
           seen.add(subjId);
-          uniqueSubjects.push({
-            id: subjId,
-            name: subjName,
-            academic_year: a.academic_year || "",
-          });
+          uniqueSubjects.push({ id: subjId, name: subjName });
         }
       });
 
       setSubjects(uniqueSubjects);
-
     } catch (err) {
       setError("Failed to load subjects.");
     } finally {
@@ -146,17 +146,21 @@ const TeacherClassResults = () => {
       const allResults = [];
 
       for (const subj of subjects) {
-        const res = await api.get(`results/results/?subject=${subj.id}`);
-        const subjResults = getArray(res.data);
-        subjResults.forEach(r => {
-          if (classStudentIds.has(String(r.student || r.student_id))) {
-            allResults.push({
-              ...r,
-              subject_name: subj.name,
-              subject_id: subj.id,
-            });
-          }
-        });
+        try {
+          const res = await api.get(`results/results/?subject=${subj.id}`);
+          const subjResults = getArray(res.data);
+          subjResults.forEach(r => {
+            if (classStudentIds.has(String(r.student || r.student_id))) {
+              allResults.push({
+                ...r,
+                subject_name: subj.name,
+                subject_id: subj.id,
+              });
+            }
+          });
+        } catch (err) {
+          if (err.response?.status !== 403) throw err;
+        }
       }
 
       let tableData = classStudents.map(student => {
@@ -183,7 +187,6 @@ const TeacherClassResults = () => {
       });
 
       tableData.sort((a, b) => b.total - a.total);
-
       if (tableData.length > 0) {
         let position = 1;
         tableData[0].position = position;
@@ -196,9 +199,12 @@ const TeacherClassResults = () => {
       }
 
       setResults(tableData);
-
     } catch (err) {
-      setError("Failed to load overall performance.");
+      if (err.response?.status === 403) {
+        setError("⚠️ Permission denied on results.");
+      } else {
+        setError("Failed to load performance data.");
+      }
     } finally {
       setLoadingResults(false);
     }
@@ -264,9 +270,12 @@ const TeacherClassResults = () => {
       }
 
       setResults(tableData);
-
     } catch (err) {
-      setError("Failed to load results.");
+      if (err.response?.status === 403) {
+        setError("⚠️ Permission denied on results.");
+      } else {
+        setError("Failed to load results.");
+      }
     } finally {
       setLoadingResults(false);
     }
@@ -301,8 +310,8 @@ const TeacherClassResults = () => {
 
 
   useEffect(() => {
-    loadClasses();
-  }, [loadClasses]);
+    loadAllClasses();
+  }, [loadAllClasses]);
 
 
   // ==========================================
@@ -313,18 +322,18 @@ const TeacherClassResults = () => {
   return (
     <div className="p-3 md:p-6">
       <div className="mb-4 md:mb-6">
-        <h3 className="text-lg md:text-xl font-bold text-gray-800">
-          <i className="bi bi-bar-chart-fill me-2"></i>
-          Class Results Summary
+        <h3 className="text-lg md:text-xl font-bold text-green-700">
+          <i className="bi bi-bar-chart-fill me-2 text-green-600"></i>
+          Class Performance Overview
         </h3>
-        <p className="text-sm text-gray-500 mt-1">Select Class → Select View → View marks & rankings.</p>
+        <p className="text-sm text-gray-500 mt-1">Select Class → Select View → Review performance & rankings.</p>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 mb-4">
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 mb-4">
           <i className="bi bi-exclamation-triangle-fill me-2"></i>
           {error}
-          <button onClick={loadClasses} className="ml-3 text-red-700 underline text-sm">Retry</button>
+          <button onClick={loadAllClasses} className="ml-3 text-amber-800 underline text-sm">Retry</button>
         </div>
       )}
 
@@ -332,14 +341,14 @@ const TeacherClassResults = () => {
       <div className="flex flex-col md:flex-row gap-3 md:gap-4 mb-4 md:mb-6">
         <div className="flex-1 max-w-md">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            <i className="bi bi-building me-1"></i> Class
+            <i className="bi bi-building me-1"></i> Select Class
           </label>
           <select
             value={selectedClassId}
             onChange={handleClassChange}
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 text-sm"
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-800 text-sm"
           >
-            <option value="">-- Choose --</option>
+            <option value="">-- Choose a Class --</option>
             {classes.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -348,18 +357,18 @@ const TeacherClassResults = () => {
 
         <div className="flex-1 max-w-md">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            <i className="bi bi-table me-1"></i> View
+            <i className="bi bi-table me-1"></i> Select View
           </label>
           <select
             value={selectedMode}
             onChange={handleModeChange}
             disabled={!selectedClassId || loadingSubjects}
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-800 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
-            <option value="">-- Choose --</option>
-            <option value="overall">📊 All Subjects</option>
+            <option value="">-- Choose View --</option>
+            <option value="overall">📊 All Subjects Performance</option>
             {loadingSubjects ? (
-              <option disabled>Loading...</option>
+              <option disabled>Loading subjects...</option>
             ) : (
               subjects.map(s => (
                 <option key={s.id} value={s.id}>
@@ -371,12 +380,12 @@ const TeacherClassResults = () => {
         </div>
       </div>
 
-      {/* RESULTS TABLE — FITS ON SCREEN, NO SCROLL */}
+      {/* RESULTS TABLE */}
       {selectedMode && (
         <div>
-          <h4 className="text-base md:text-lg font-semibold text-gray-700 mb-3 md:mb-4">
-            <i className="bi bi-award me-2"></i>
-            {selectedClassName} — {selectedMode === "overall" ? "📊 Performance" : subjects.find(s => String(s.id) === String(selectedMode))?.name}
+          <h4 className="text-base md:text-lg font-semibold text-green-700 mb-3 md:mb-4">
+            <i className="bi bi-award me-2 text-green-600"></i>
+            {selectedClassName} — {selectedMode === "overall" ? "📊 Performance Overview" : subjects.find(s => String(s.id) === String(selectedMode))?.name}
           </h4>
 
           {loadingResults ? (
@@ -384,16 +393,14 @@ const TeacherClassResults = () => {
           ) : results.length === 0 ? (
             <div className="bg-gray-50 border border-gray-200 text-gray-600 rounded-lg p-4">
               <i className="bi bi-info-circle me-2"></i>
-              No results found. Marks may not have been entered yet.
+              {error ? "Resolve permission issue above to view data." : "No results found. Marks may not have been entered yet."}
             </div>
           ) : selectedMode === "overall" ? (
-            // =====================================
-            // OVERALL TABLE — NO HORIZONTAL SCROLL
-            // =====================================
+            // OVERALL TABLE
             <div className="rounded-lg border border-gray-200 shadow-sm overflow-hidden">
               <table className="w-full text-xs md:text-sm">
                 <thead>
-                  <tr className="bg-blue-600 text-white">
+                  <tr className="bg-green-600 text-white">
                     <th className="px-1 py-2 md:px-2 md:py-3 text-center font-medium">#</th>
                     <th className="px-1 py-2 md:px-2 md:py-3 text-left font-medium">Student</th>
                     {subjects.map(s => (
@@ -423,20 +430,18 @@ const TeacherClassResults = () => {
                       })}
                       <td className="px-1 py-2 md:px-2 md:py-2.5 text-center font-bold text-gray-800">{row.total}</td>
                       <td className="px-1 py-2 md:px-2 md:py-2.5 text-center text-gray-600 font-medium">{row.average}</td>
-                      <td className="px-1 py-2 md:px-2 md:py-2.5 text-center font-bold text-blue-600">{row.position}</td>
+                      <td className="px-1 py-2 md:px-2 md:py-2.5 text-center font-bold text-green-600">{row.position}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            // =====================================
-            // SINGLE SUBJECT TABLE — FITS ON SCREEN
-            // =====================================
+            // SINGLE SUBJECT TABLE
             <div className="rounded-lg border border-gray-200 shadow-sm overflow-hidden">
               <table className="w-full text-xs md:text-sm">
                 <thead>
-                  <tr className="bg-blue-600 text-white">
+                  <tr className="bg-green-600 text-white">
                     <th className="px-2 py-2 md:px-3 md:py-3 text-center font-medium">#</th>
                     <th className="px-2 py-2 md:px-3 md:py-3 text-left font-medium">Student</th>
                     <th className="px-2 py-2 md:px-3 md:py-3 text-center font-medium">Marks</th>
@@ -453,7 +458,7 @@ const TeacherClassResults = () => {
                       <td className="px-2 py-2 md:px-3 md:py-2.5 text-center font-bold text-gray-800">
                         {row.marks !== null ? row.marks : "—"}
                       </td>
-                      <td className="px-2 py-2 md:px-3 md:py-2.5 text-center font-bold text-blue-600">{row.position}</td>
+                      <td className="px-2 py-2 md:px-3 md:py-2.5 text-center font-bold text-green-600">{row.position}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -467,4 +472,4 @@ const TeacherClassResults = () => {
 };
 
 
-export default TeacherClassResults;
+export default CoordinatorClassPerformance;
