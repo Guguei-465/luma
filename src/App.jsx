@@ -87,6 +87,8 @@ import AcademicCoordinatorResults from "./components/academiccoordinator/Academi
 import ParentChildren from "./components/admin/ParentChildren";
 import StudentAttendance from "./components/academiccoordinator/StudentAttendance";
 import AcademicCoordinatorWorkload from "./components/academiccoordinator/AcademicCoordinatorWorkload";
+import TeacherNotifications from "./components/teachers/TeacherNotifications";
+import TeacherClassResults from "./components/teachers/TeacherClassResults";
  
 
 function App() {
@@ -254,9 +256,6 @@ function App() {
           }
         >
           <Route index element={<TeacherDashboard />} />
-          
-           
-          
           <Route path="students" element={<TeacherStudents />} />
           <Route path="assessments" element={<TeacherAssessments />} />
           <Route path="assessments/:id" element={<TeacherAssessments />} />
@@ -265,6 +264,8 @@ function App() {
           <Route path="attendance" element={<TeacherAttendance />} />
           <Route path="timetable" element={<TeacherTimetable />} />
           <Route path="reports" element={<TeacherReports />} />
+          <Route path="notifications" element={<TeacherNotifications />} />
+          <Route path="class-results" element={<TeacherClassResults />} />
           <Route path="profile" element={<TeacherProfile />} />
         </Route>
 

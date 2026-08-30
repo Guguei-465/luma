@@ -23,6 +23,7 @@ const getArray = (data) => {
   return [];
 };
 
+
 const firstValue = (...values) => {
   for (const value of values) {
     if (value !== undefined && value !== null && value !== "") return value;
@@ -30,12 +31,14 @@ const firstValue = (...values) => {
   return null;
 };
 
+
 const isTrue = (value) => {
   return (
     value === true || value === 1 || value === "1" ||
     value === "true" || value === "True" || value === "TRUE"
   );
 };
+
 
 const getClassName = (classroom) => {
   if (!classroom) return "Class";
@@ -46,7 +49,7 @@ const getClassName = (classroom) => {
 
 
 // =====================================================
-// STUDENT DETAILS MODAL — ✅ PARENT NAME ONLY, NO EXTRA API
+// STUDENT DETAILS MODAL
 // =====================================================
 const StudentDetailsModal = ({ student, onClose }) => {
   const [details, setDetails] = useState(null);
@@ -59,12 +62,9 @@ const StudentDetailsModal = ({ student, onClose }) => {
       try {
         setLoading(true);
         setError("");
-
-        // ✅ Load student — uses WORKING endpoint
         const { data: studentData } = await api.get(`students/${student.id}/`);
         setDetails(studentData);
         console.log("✅ Student loaded:", studentData);
-
       } catch (err) {
         console.error("❌ Student details error:", err.response?.data || err.message);
         setError("Could not load student details.");
@@ -91,7 +91,6 @@ const StudentDetailsModal = ({ student, onClose }) => {
             <p className="text-red-600 text-center py-4">{error}</p>
           ) : details ? (
             <div className="space-y-4">
-              {/* --- STUDENT INFO --- */}
               <div className="bg-green-50 rounded-lg p-4">
                 <h3 className="font-semibold text-green-800 mb-2">👨‍🎓 Student</h3>
                 <p className="text-sm"><strong>Name:</strong> {details.first_name} {details.last_name}</p>
@@ -99,8 +98,6 @@ const StudentDetailsModal = ({ student, onClose }) => {
                 <p className="text-sm mt-1"><strong>Class:</strong> {details.classroom_name || "—"}</p>
                 <p className="text-sm mt-1"><strong>Status:</strong> {details.status || "Active"}</p>
               </div>
-
-              {/* --- PARENT/GUARDIAN — ✅ NAME ONLY --- */}
               <div className="bg-blue-50 rounded-lg p-4">
                 <h3 className="font-semibold text-blue-800 mb-2">👨‍👩‍👧 Parent / Guardian</h3>
                 <p className="text-sm">
@@ -120,7 +117,7 @@ const StudentDetailsModal = ({ student, onClose }) => {
 
 
 // =====================================================
-// STUDENT RESULTS MODAL
+// ✅ STUDENT RESULTS MODAL — USING THE WORKING ENDPOINT
 // =====================================================
 const StudentResultsModal = ({ student, onClose }) => {
   const [results, setResults] = useState([]);
@@ -130,28 +127,106 @@ const StudentResultsModal = ({ student, onClose }) => {
   useEffect(() => {
     const fetchResults = async () => {
       if (!student?.id) return;
+
+      const CURRENT_STUDENT_ID = Number(student.id);
+      console.log("========================================");
+      console.log("🎯 LOADING RESULTS FOR:", student.name, "| ID:", CURRENT_STUDENT_ID);
+      console.log("========================================");
+
       try {
         setLoading(true);
         setError("");
-        const { data } = await api.get(`results/result-submissions/?student=${student.id}`);
-        setResults(getArray(data));
+
+        // ✅ METHOD 1: USE THE PROVEN WORKING ENDPOINT
+        try {
+          const { data: allResults } = await api.get("results/student-results/");
+          const marksList = getArray(allResults);
+          console.log("📥 Total results loaded:", marksList.length);
+
+          // ✅ Filter to ONLY this student
+          let filteredMarks = marksList.filter(
+            (m) => Number(m.student) === CURRENT_STUDENT_ID
+          );
+          console.log("✅ Matched results for this student:", filteredMarks.length);
+
+          // ✅ Remove duplicates — keep latest per subject+term+year
+          const uniqueMap = {};
+          filteredMarks.forEach((m) => {
+            const key = `${m.subject_name}-${m.term}-${m.academic_year}`;
+            if (!uniqueMap[key] || new Date(m.updated_at) > new Date(uniqueMap[key].updated_at)) {
+              uniqueMap[key] = m;
+            }
+          });
+          filteredMarks = Object.values(uniqueMap);
+          console.log("✅ After dedup:", filteredMarks.length);
+
+          // ✅ Format using YOUR ACTUAL FIELD NAMES
+          const formatted = filteredMarks.map((m) => ({
+            id: m.id,
+            subject_name: m.subject_name || "Subject",
+            marks: m.total_score || m.average_score || "—",
+            grade: m.grade_name || m.cbc_code || "—",
+            remarks: m.grade_description || m.teacher_comment || m.cbc_description || "—",
+            term: m.term || "",
+            academic_year: m.academic_year || "",
+            assessment_name: m.term && m.academic_year
+              ? `${m.term} • ${m.academic_year}`
+              : "Assessment",
+          }));
+
+          setResults(formatted);
+          return; // ✅ Done — don't try fallback
+        } catch (err) {
+          console.log("📌 student-results endpoint issue:", err.response?.status);
+        }
+
+        // ✅ METHOD 2: FALLBACK — submissions approach
+        const { data: subData } = await api.get("results/result-submissions/");
+        const allSubmissions = getArray(subData);
+        console.log("📥 Fallback — submissions loaded:", allSubmissions.length);
+
+        const extracted = [];
+        allSubmissions.forEach((sub) => {
+          if (!Array.isArray(sub.students)) return;
+          const studentMark = sub.students.find(
+            (sm) => Number(sm.student || sm.student_id) === CURRENT_STUDENT_ID
+          );
+          if (studentMark) {
+            extracted.push({
+              id: sub.id,
+              subject_name: sub.subject_name || "Subject",
+              assessment_name: [sub.term, sub.academic_year].filter(Boolean).join(" • ") || "Assessment",
+              marks: studentMark.marks || studentMark.score || "—",
+              grade: studentMark.grade || "—",
+              remarks: studentMark.remarks || "",
+              term: sub.term || "",
+              academic_year: sub.academic_year || "",
+            });
+          }
+        });
+
+        console.log("✅ Fallback results:", extracted.length);
+        setResults(extracted);
+
       } catch (err) {
-        console.error("❌ Failed to load results:", err);
+        console.error("❌ Failed to load results:", err.response?.data || err.message);
         setError("Could not load results.");
       } finally {
         setLoading(false);
       }
     };
     fetchResults();
-  }, [student?.id]);
+  }, [student?.id, student.name]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-gray-800">Student Results</h2>
-            <p className="text-sm text-gray-500">{student.name || student.admission_number}</p>
+            <h2 className="text-lg font-bold text-gray-800">📊 Student Results</h2>
+            <p className="text-sm text-gray-500">
+              {student.name || student.admission_number} • Latest Results
+            </p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
         </div>
@@ -163,21 +238,28 @@ const StudentResultsModal = ({ student, onClose }) => {
           ) : error ? (
             <p className="text-red-600 text-center py-4">{error}</p>
           ) : results.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No results found for this student.</p>
+            <div className="text-center py-8">
+              <div className="text-3xl mb-3">📭</div>
+              <p className="text-gray-500">No results found for this student.</p>
+              <p className="text-sm text-gray-400 mt-2">Results appear once recorded.</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {results.map((r, i) => (
-                <div key={r.id || i} className="border border-gray-100 rounded-lg p-3 hover:bg-gray-50">
+                <div key={`${r.id}-${i}`} className="border border-gray-100 rounded-lg p-4 hover:bg-green-50">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="font-medium text-gray-800">{r.subject_name || r.subject || "Subject"}</p>
-                      <p className="text-sm text-gray-500">{r.exam_name || r.term || ""} • {r.academic_year || ""}</p>
+                      <p className="font-semibold text-gray-800">{r.subject_name || "Subject"}</p>
+                      <p className="text-sm text-gray-500">{r.assessment_name}</p>
+                      {r.remarks && r.remarks !== "—" && (
+                        <p className="text-sm text-gray-600 mt-1 italic">"{r.remarks}"</p>
+                      )}
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-green-700">
-                        {r.score ?? r.marks ?? "—"}{r.score || r.marks ? "%" : ""}
-                      </p>
-                      <p className="text-sm text-gray-500">{r.grade || "—"}</p>
+                      <p className="text-2xl font-bold text-green-700">{r.marks}</p>
+                      {r.grade && r.grade !== "—" && (
+                        <p className="text-sm font-medium text-green-600 mt-1">{r.grade}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -195,7 +277,7 @@ const StudentResultsModal = ({ student, onClose }) => {
 
 
 // =====================================================
-// TEACHER STUDENTS — MAIN COMPONENT
+// MAIN COMPONENT
 // =====================================================
 const TeacherStudents = () => {
   const [assignments, setAssignments] = useState([]);

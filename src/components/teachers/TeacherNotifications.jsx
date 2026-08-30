@@ -19,12 +19,6 @@ const getArray = (data) => {
 };
 
 
-const safeString = (value, fallback = "") => {
-  if (value === undefined || value === null) return fallback;
-  return String(value);
-};
-
-
 const formatDateTime = (value) => {
   if (!value) return "Date unavailable";
   try {
@@ -34,7 +28,7 @@ const formatDateTime = (value) => {
 };
 
 
-const ParentNotifications = () => {
+const TeacherNotifications = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [myNotifications, setMyNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -49,6 +43,7 @@ const ParentNotifications = () => {
       setLoading(true);
       setError("");
 
+      // ✅ SAME ENDPOINTS — works for Teacher too!
       const [annRes, notifRes, countRes] = await Promise.all([
         api.get("anouncements/"),
         api.get("notifiations/my/"),
@@ -80,7 +75,7 @@ const ParentNotifications = () => {
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (err) {
-      // Silently fail or handle gracefully
+      // Silent fail
     } finally {
       setMarkingId(null);
     }
@@ -94,7 +89,7 @@ const ParentNotifications = () => {
       setMyNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       setUnreadCount(0);
     } catch (err) {
-      // Silently fail or handle gracefully
+      // Silent fail
     } finally {
       setMarkingAll(false);
     }
@@ -132,7 +127,7 @@ const ParentNotifications = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h3 className="text-xl font-bold text-gray-800">Updates & Notifications</h3>
-          <p className="text-sm text-gray-500 mt-1">School announcements and personal alerts.</p>
+          <p className="text-sm text-gray-500 mt-1">School announcements and your personal alerts.</p>
         </div>
         <button
           onClick={fetchAll}
@@ -142,7 +137,7 @@ const ParentNotifications = () => {
         </button>
       </div>
 
-      {/* PERSONAL NOTIFICATIONS */}
+      {/* TEACHER'S PERSONAL NOTIFICATIONS */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
@@ -213,9 +208,9 @@ const ParentNotifications = () => {
         )}
       </div>
 
-      {/* PUBLIC ANNOUNCEMENTS */}
+      {/* ALL ANNOUNCEMENTS */}
       <div>
-        <h4 className="text-lg font-semibold text-gray-700 mb-3">📢 Announcements ({announcements.length})</h4>
+        <h4 className="text-lg font-semibold text-gray-700 mb-3">📢 All Announcements ({announcements.length})</h4>
         {announcements.length === 0 ? (
           <div className="bg-gray-50 border border-gray-200 text-gray-600 rounded-lg p-4">
             No announcements yet.
@@ -248,4 +243,4 @@ const ParentNotifications = () => {
 };
 
 
-export default ParentNotifications;
+export default TeacherNotifications;

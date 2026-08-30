@@ -56,6 +56,10 @@ const TeacherSidebar = ({ isOpen, setIsOpen }) => {
                 <span>Submitted Results</span>
               </NavLink>
 
+              <NavLink to="/teacher/class-results" className={linkClass}>
+                <i className="bi bi-table me-2"></i> Class Results Summary
+              </NavLink>
+
               <NavLink to="/teacher/attendance" end className={linkClass} onClick={() => setIsOpen(false)}>
                 <i className="bi bi-calendar-check text-lg"></i>
                 <span>Attendance</span>
@@ -70,16 +74,18 @@ const TeacherSidebar = ({ isOpen, setIsOpen }) => {
                 <i className="bi bi-bar-chart text-lg"></i>
                 <span>Reports</span>
               </NavLink>
+
+              <NavLink to="/teacher/notifications" className={linkClass}>
+                Updates & Notifications
+              </NavLink>
+               
+              <NavLink to="/teacher/profile" end className={linkClass} onClick={() => setIsOpen(false)}>
+                <i className="bi bi-person-circle text-lg"></i>
+                <span>My Profile</span>
+              </NavLink>
             </div>
           </nav>
-
-          {/* ✅ PROFILE — PINNED TO BOTTOM, ALWAYS VISIBLE */}
-          <div className="mt-auto pt-3 border-t border-white/10 shrink-0">
-            <NavLink to="/teacher/profile" end className={linkClass} onClick={() => setIsOpen(false)}>
-              <i className="bi bi-person-circle text-lg"></i>
-              <span>My Profile</span>
-            </NavLink>
-          </div>
+            
         </div>
       </aside>
     </>

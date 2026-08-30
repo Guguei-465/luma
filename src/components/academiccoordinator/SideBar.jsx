@@ -1,6 +1,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 
+
 const SideBar = ({ isOpen, setIsOpen }) => {
   const linkClass = ({ isActive }) =>
     `flex items-center gap-4 px-3 py-2.5 rounded-lg transition-all duration-200 ${
@@ -9,12 +10,15 @@ const SideBar = ({ isOpen, setIsOpen }) => {
         : "text-gray-200 hover:bg-white/10 hover:text-white"
     }`;
 
+
   const sectionHeading =
     "text-gray-300 text-sm font-semibold uppercase tracking-wider px-3 py-2 mt-6 mb-1";
+
 
   const closeSidebar = () => {
     setIsOpen(false);
   };
+
 
   return (
     <>
@@ -25,6 +29,7 @@ const SideBar = ({ isOpen, setIsOpen }) => {
           onClick={closeSidebar}
         />
       )}
+
 
       {/* SIDEBAR */}
       <aside
@@ -50,12 +55,14 @@ const SideBar = ({ isOpen, setIsOpen }) => {
       >
         <div className="h-full flex flex-col">
 
+
           {/* HEADER */}
           <div className="p-5 border-b border-white/20 flex-shrink-0">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold">
                 Luma 2000 Academy
               </h2>
+
 
               {/* MOBILE CLOSE BUTTON */}
               <button
@@ -68,6 +75,7 @@ const SideBar = ({ isOpen, setIsOpen }) => {
               </button>
             </div>
           </div>
+
 
           {/* NAVIGATION */}
           <div
@@ -85,6 +93,7 @@ const SideBar = ({ isOpen, setIsOpen }) => {
           >
             <nav className="space-y-1">
 
+
               {/* Dashboard */}
               <NavLink
                 to="/academic-coordinator"
@@ -96,10 +105,12 @@ const SideBar = ({ isOpen, setIsOpen }) => {
                 Dashboard
               </NavLink>
 
+
               {/* Academic Management */}
               <p className={sectionHeading}>
                 Academic Management
               </p>
+
 
               <NavLink
                 to="/academic-coordinator/teachers"
@@ -110,6 +121,17 @@ const SideBar = ({ isOpen, setIsOpen }) => {
                 Teachers
               </NavLink>
 
+              {/* ✅ TEACHER WORKLOAD — ADDED HERE */}
+              <NavLink
+                to="/academic-coordinator/workload"
+                className={linkClass}
+                onClick={closeSidebar}
+              >
+                <i className="bi bi-bar-chart-steps text-lg"></i>
+                Teacher Workload
+              </NavLink>
+
+
               <NavLink
                 to="/academic-coordinator/students"
                 className={linkClass}
@@ -118,6 +140,7 @@ const SideBar = ({ isOpen, setIsOpen }) => {
                 <i className="bi bi-people-fill text-lg"></i>
                 Students
               </NavLink>
+
 
               <NavLink
                 to="/academic-coordinator/subjects"
@@ -128,6 +151,7 @@ const SideBar = ({ isOpen, setIsOpen }) => {
                 Subjects
               </NavLink>
 
+
               <NavLink
                 to="/academic-coordinator/classes"
                 className={linkClass}
@@ -136,6 +160,7 @@ const SideBar = ({ isOpen, setIsOpen }) => {
                 <i className="bi bi-building text-lg"></i>
                 Classes
               </NavLink>
+
 
               <NavLink
                 to="/academic-coordinator/assessments"
@@ -146,6 +171,7 @@ const SideBar = ({ isOpen, setIsOpen }) => {
                 Assessments
               </NavLink>
 
+
               <NavLink
                 to="/academic-coordinator/timetable"
                 className={linkClass}
@@ -154,6 +180,7 @@ const SideBar = ({ isOpen, setIsOpen }) => {
                 <i className="bi bi-calendar3 text-lg"></i>
                 Timetable
               </NavLink>
+
 
               <NavLink
                 to="/academic-coordinator/reports"
@@ -164,10 +191,12 @@ const SideBar = ({ isOpen, setIsOpen }) => {
                 Reports
               </NavLink>
 
+
               {/* Results & Grading */}
               <p className={sectionHeading}>
                 Results & Grading
               </p>
+
 
               <NavLink
                 to="/academic-coordinator/academic-results"
@@ -178,6 +207,7 @@ const SideBar = ({ isOpen, setIsOpen }) => {
                 Result Submissions
               </NavLink>
 
+
               <NavLink
                 to="/academic-coordinator/grade-scales"
                 className={linkClass}
@@ -186,6 +216,7 @@ const SideBar = ({ isOpen, setIsOpen }) => {
                 <i className="bi bi-award-fill text-lg"></i>
                 Grade Scales
               </NavLink>
+
 
               <NavLink
                 to="/academic-coordinator/learning-outcomes"
@@ -196,10 +227,12 @@ const SideBar = ({ isOpen, setIsOpen }) => {
                 Learning Outcomes
               </NavLink>
 
+
               {/* Account */}
               <p className={sectionHeading}>
                 Account
               </p>
+
 
               <NavLink
                 to="/academic-coordinator/profile"
@@ -210,6 +243,7 @@ const SideBar = ({ isOpen, setIsOpen }) => {
                 My Profile
               </NavLink>
 
+
             </nav>
           </div>
         </div>
@@ -217,5 +251,6 @@ const SideBar = ({ isOpen, setIsOpen }) => {
     </>
   );
 };
+
 
 export default SideBar;

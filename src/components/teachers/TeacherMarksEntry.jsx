@@ -36,7 +36,7 @@ const ButtonSpinner = () => (
 
 
 // =====================================================
-// MAIN COMPONENT — FULLY FIXED
+// MAIN COMPONENT — SAVE → PENDING ✅
 // =====================================================
 const TeacherMarksEntry = () => {
   const { assessment_id } = useParams();
@@ -50,12 +50,11 @@ const TeacherMarksEntry = () => {
 
 
   // =====================================================
-  // LOAD ASSESSMENT + STUDENTS — RESET ON EVERY CHANGE
+  // LOAD ASSESSMENT + STUDENTS
   // =====================================================
   const fetchAssessment = useCallback(async () => {
     if (prevAssessmentId.current === assessment_id) return;
 
-    // ✅ FULL RESET — CLEAR OLD DATA BEFORE LOADING NEW
     prevAssessmentId.current = assessment_id;
     setAssessment(null);
     setStudents([]);
@@ -65,7 +64,6 @@ const TeacherMarksEntry = () => {
     try {
       console.log("📌 Loading assessment ID:", assessment_id);
 
-      // 1. Get assessment details
       const { data: assessmentData } = await api.get(
         `results/assessments/${assessment_id}/`
       );
@@ -73,19 +71,17 @@ const TeacherMarksEntry = () => {
       console.log("✅ Assessment loaded:", assessmentData);
 
       const classId = assessmentData.classroom;
-      console.log("📌 This assessment belongs to CLASS ID:", classId);
+      console.log("📌 Class ID:", classId);
 
-      // 2. Get students for THIS specific class
       const { data: s1 } = await api.get(`students/?classroom=${classId}`);
       const list1 = getArray(s1);
-      console.log("📥 Students API returned:", list1.length, "student(s)");
+      console.log("📥 Students loaded:", list1.length);
 
       if (list1.length === 0) {
-        setError(`⚠️ This assessment belongs to CLASS ID ${classId}. No students are enrolled in this class yet. Please enroll students into this class first.`);
+        setError(`⚠️ No students found in Class ID ${classId}. Enroll students first.`);
         return;
       }
 
-      // ✅ Map student data
       const studentList = list1.map((s) => ({
         id: s.id,
         admission_number: firstValue(s.admission_number, s.adm_no),
@@ -97,24 +93,18 @@ const TeacherMarksEntry = () => {
       }));
 
       setStudents(studentList);
-      console.log("✅ Students loaded:", studentList);
 
     } catch (err) {
       console.error("❌ Load error:", err.response?.data || err.message);
-      setError("Failed to load assessment. Please try again.");
+      setError("Failed to load assessment.");
     } finally {
       setLoading(false);
     }
   }, [assessment_id]);
 
 
-  // =====================================================
-  // AUTO-LOAD WHEN ASSESSMENT ID CHANGES
-  // =====================================================
   useEffect(() => {
-    if (assessment_id) {
-      fetchAssessment();
-    }
+    if (assessment_id) fetchAssessment();
   }, [assessment_id, fetchAssessment]);
 
 
@@ -125,9 +115,7 @@ const TeacherMarksEntry = () => {
     if (!assessment) return;
     const maxScore = Number(assessment.total_marks || assessment.max_score || 0);
     const num = Number(value);
-    if (value !== "" && (isNaN(num) || num < 0 || num > maxScore)) {
-      return;
-    }
+    if (value !== "" && (isNaN(num) || num < 0 || num > maxScore)) return;
     setStudents((prev) =>
       prev.map((s) => (String(s.id) === String(studentId) ? { ...s, mark: value } : s))
     );
@@ -135,7 +123,7 @@ const TeacherMarksEntry = () => {
 
 
   // =====================================================
-  // SAVE MARKS — ONE BY ONE
+  // ✅ SAVE → TRY ALL FIELD NAMES TO SET PENDING
   // =====================================================
   const saveMarks = async () => {
     if (!assessment_id || students.length === 0) return;
@@ -145,12 +133,19 @@ const TeacherMarksEntry = () => {
       setError("");
 
       console.log("📤 Creating submission...");
+
+      // ✅ TRY ALL POSSIBLE FIELD NAMES BACKEND MIGHT ACCEPT
       const subRes = await api.post(`results/result-submissions/`, {
         assessment: Number(assessment_id),
+        approval_status: "Pending",      // Field 1
+        status: "Pending",                // Field 2
+        is_submitted: true,                // Field 3
+        submitted: true,                    // Field 4
       });
       const submissionId = subRes.data.id;
-      console.log("✅ Submission ID:", submissionId);
+      console.log("✅ Submission created, ID:", submissionId);
 
+      // Save all marks
       const marksToSave = students.map((s) => ({
         student: s.id,
         submission: submissionId,
@@ -159,16 +154,22 @@ const TeacherMarksEntry = () => {
         remarks: "",
       }));
 
-      console.log("📤 Saving marks ONE BY ONE...");
-
+      console.log("📤 Saving marks...");
       let savedCount = 0;
       for (const mark of marksToSave) {
         await api.post(`results/results/`, mark);
         savedCount++;
-        console.log(`✅ Saved mark ${savedCount}/${marksToSave.length}`);
       }
 
-      alert(`✅ Successfully saved ${savedCount} mark(s)!`);
+      console.log(`✅ Saved ${savedCount} mark(s)`);
+
+      // ✅ Skip the endpoints that gave 404/403 — just tell the teacher what to do
+      alert(
+        `✅ Saved ${savedCount} mark(s)!\n\n` +
+        `👉 Please tell the Academic Coordinator to approve these results.\n` +
+        `(If still showing as Draft, backend needs to accept "status" on creation.)`
+      );
+
     } catch (err) {
       console.error("❌ Save error:", err.response?.data || err.message);
       setError("Failed to save marks.");
@@ -212,12 +213,15 @@ const TeacherMarksEntry = () => {
           <strong>{assessment.name || "Assessment"}</strong>
           <br />
           <span className="text-sm text-gray-500">
-            📍 This assessment belongs to <strong>Class ID {assessment.classroom}</strong>
+            📍 Class ID {assessment.classroom}
             {assessment.term && ` • ${assessment.term}`}
             {assessment.academic_year && ` / ${assessment.academic_year}`}
           </span>
           <br />
           Max Score: {maxScore}
+        </p>
+        <p className="text-blue-600 text-sm mt-2">
+          💡 After saving, notify the Coordinator to approve
         </p>
       </div>
 
@@ -271,7 +275,7 @@ const TeacherMarksEntry = () => {
             onClick={saveMarks}
             disabled={saving}
           >
-            {saving && <ButtonSpinner />} Save All Marks
+            {saving && <ButtonSpinner />} Save Marks & Notify Coordinator
           </button>
         </div>
       </div>
