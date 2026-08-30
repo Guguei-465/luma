@@ -90,6 +90,7 @@ import AcademicCoordinatorWorkload from "./components/academiccoordinator/Academ
 import TeacherNotifications from "./components/teachers/TeacherNotifications";
 import TeacherClassResults from "./components/teachers/TeacherClassResults";
 import CoordinatorClassPerformance from "./components/academiccoordinator/CoordinatorClassPerformance";
+import AdminClassPerformance from "./components/admin/AdminClassPerformance";
  
 
 function App() {
@@ -148,6 +149,7 @@ function App() {
             <Route path="users" element={<AdminUserList />} />
             <Route path="notices" element={<AdminNotices />} />
             <Route path="notices/send" element={<SendNotices />} />
+            <Route path="class-performance" element={<AdminClassPerformance />} />
             <Route path="profile" element={<AdminProfile />} />
           </Route>
 

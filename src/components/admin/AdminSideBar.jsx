@@ -1,18 +1,18 @@
-// ==========================================
-// AdminSideBar.jsx — FULL CORRECTED VERSION
-// ==========================================
 import { NavLink } from "react-router-dom";
+
 
 const AdminSideBar = ({ isOpen, setIsOpen }) => {
   const linkClass = ({ isActive }) =>
-    `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+    `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm ${
       isActive
-        ? "bg-green-700 text-white shadow-md"
-        : "text-white hover:bg-green-600/15 hover:text-green-100"
+        ? "bg-green-600 text-white shadow-md"
+        : "text-gray-300 hover:bg-white/10 hover:text-white"
     }`;
 
-  const sectionTitle =
-    "px-4 mt-6 mb-2 text-[11px] font-bold uppercase tracking-widest text-teal-200";
+
+  const sectionHeading =
+    "text-gray-300 text-sm font-semibold uppercase tracking-wider px-3 py-2 mt-6 mb-1";
+
 
   const navItems = [
     { to: "/admin-dashboard", end: true, icon: "bi bi-speedometer2", label: "Dashboard" },
@@ -21,20 +21,25 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
     { to: "/admin-dashboard/parents", icon: "bi bi-people", label: "Parents" },
   ];
 
+
   const financeItems = [
     { to: "/admin-dashboard/fees-structures", icon: "bi bi-receipt", label: "Fee Structures List" },
     { to: "/admin-dashboard/fees-payments", icon: "bi bi-credit-card", label: "Payments List" },
   ];
 
+
   const academicItems = [
     { to: "/admin-dashboard/exams", icon: "bi bi-pencil-square", label: "Exams" },
+    { to: "/admin-dashboard/class-performance", icon: "bi bi-bar-chart-fill", label: "Class Performance" },
   ];
+
 
   const systemItems = [
     { to: "/admin-dashboard/users", icon: "bi bi-person-badge", label: "Users" },
     { to: "/admin-dashboard/notices", icon: "bi bi-megaphone-fill", label: "Notices" },
     { to: "/admin-dashboard/profile", icon: "bi bi-person-fill", label: "Profile" },
   ];
+
 
   const renderLinks = (items) =>
     items.map((item) => (
@@ -50,15 +55,19 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
       </NavLink>
     ));
 
+
   return (
     <>
+      {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 md:hidden z-40"
+          className="fixed inset-0 bg-black/50 md:hidden z-40 backdrop-blur-sm"
           onClick={() => setIsOpen(false)}
         />
       )}
 
+
+      {/* Sidebar */}
       <aside
         className={`
           fixed md:static
@@ -66,7 +75,7 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
           top-0 left-0
           h-screen
           w-64
-          bg-gradient-to-b from-teal-950 via-teal-800 to-teal-600
+          bg-green-900
           text-white
           shadow-xl
           transform
@@ -75,48 +84,52 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
           overflow-y-auto
           ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         <div className="p-4">
           {/* SCHOOL BRAND */}
           <div className="flex items-center gap-3 px-2 py-3 mb-5">
-            <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shadow-sm">
-              <i className="bi bi-mortarboard-fill text-2xl text-white"></i>
+            <div className="w-10 h-10 rounded-lg bg-green-700 flex items-center justify-center">
+              <i className="bi bi-mortarboard-fill text-xl text-white"></i>
             </div>
             <div className="min-w-0">
               <h2 className="text-base font-bold leading-tight text-white">
                 Luma 2000 Academy
               </h2>
-              <p className="text-[10px] font-semibold text-teal-200 uppercase tracking-widest mt-1">
+              <p className="text-xs text-green-300 font-medium">
                 Admin Panel
               </p>
             </div>
           </div>
 
+
           {/* NAVIGATION */}
           <nav className="space-y-1">
-            <p className={sectionTitle}>Main</p>
+            <p className={sectionHeading}>Main</p>
             {renderLinks(navItems)}
 
-            <p className={sectionTitle}>Finance</p>
+
+            <p className={sectionHeading}>Finance</p>
             {renderLinks(financeItems)}
 
-            <p className={sectionTitle}>Academic</p>
+
+            <p className={sectionHeading}>Academic</p>
             {renderLinks(academicItems)}
 
-            <p className={sectionTitle}>System</p>
+
+            <p className={sectionHeading}>System</p>
             {renderLinks(systemItems)}
           </nav>
 
+
           {/* FOOTER */}
-          <div className="mt-8 pt-5 border-t border-white/10">
-            <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white/10">
-              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+          <div className="mt-8 pt-5 border-t border-green-800">
+            <div className="flex items-center gap-3 px-3 py-3 rounded-lg bg-green-800/50">
+              <div className="w-8 h-8 rounded-full bg-green-700 flex items-center justify-center">
                 <i className="bi bi-shield-check text-white"></i>
               </div>
               <div>
-                <p className="text-xs font-semibold text-white">Administrator</p>
-                <p className="text-[10px] text-teal-200">School Management System</p>
+                <p className="text-sm font-medium text-white">Administrator</p>
+                <p className="text-xs text-green-300">School Management System</p>
               </div>
             </div>
           </div>
@@ -125,5 +138,6 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
     </>
   );
 };
+
 
 export default AdminSideBar;
