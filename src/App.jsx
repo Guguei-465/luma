@@ -111,9 +111,9 @@ function App() {
       />
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+         
         <Route path="/login" element={<Login />} />
-        <Route path="/home" element={<Home />} />
+        <Route path="" element={<Home />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Global Protected Routes Wrapper */}
