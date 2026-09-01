@@ -78,22 +78,34 @@ const ResultSubmissions = () => {
     return matchSearch && matchExam;
   });
 
+  const getStatusBadge = (status) => {
+    const s = String(status).toLowerCase();
+    if (s === "approved") return "bg-green-100 text-green-700";
+    if (s === "pending") return "bg-amber-100 text-amber-700";
+    return "bg-red-100 text-red-700";
+  };
+
   if (loading) return <Spinner />;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6 space-y-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+      {/* HEADER — Responsive */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Result Submissions</h1>
-        <p className="text-gray-500 mt-2">Review submitted marks, verify accuracy & approve or reject</p>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">Result Submissions</h1>
+        <p className="text-gray-500 mt-1 sm:mt-2 text-sm sm:text-base">
+          Review submitted marks, verify accuracy & approve or reject
+        </p>
       </div>
 
       {error && (
-        <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700">{error}</div>
+        <div className="p-3 sm:p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          {error}
+        </div>
       )}
 
-      {/* Search & Filter Bar */}
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <div className="grid md:grid-cols-2 gap-4">
+      {/* Search & Filter — Responsive */}
+      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Search Student / Subject</label>
             <input
@@ -122,92 +134,141 @@ const ResultSubmissions = () => {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-amber-500">
+      {/* Stats — Responsive grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border-l-4 border-amber-500">
           <p className="text-sm text-gray-500">Pending Review</p>
-          <p className="text-3xl font-bold text-amber-600 mt-1">
+          <p className="text-2xl sm:text-3xl font-bold text-amber-600 mt-1">
             {results.filter(r => String(r.status).toLowerCase() === "pending").length}
           </p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border-l-4 border-green-500">
           <p className="text-sm text-gray-500">Approved</p>
-          <p className="text-3xl font-bold text-green-600 mt-1">
+          <p className="text-2xl sm:text-3xl font-bold text-green-600 mt-1">
             {results.filter(r => String(r.status).toLowerCase() === "approved").length}
           </p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-500">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border-l-4 border-red-500">
           <p className="text-sm text-gray-500">Rejected</p>
-          <p className="text-3xl font-bold text-red-600 mt-1">
+          <p className="text-2xl sm:text-3xl font-bold text-red-600 mt-1">
             {results.filter(r => String(r.status).toLowerCase() === "rejected").length}
           </p>
         </div>
       </div>
 
-      {/* Results Table */}
+      {/* RESULTS VIEW — Desktop Table / Mobile Cards */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {filteredResults.length === 0 ? (
-          <div className="text-center py-16 text-gray-500">
-            <p className="text-lg">No result submissions match your filters.</p>
+          <div className="text-center py-10 sm:py-16 text-gray-500">
+            <p className="text-base sm:text-lg">No result submissions match your filters.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-green-50 border-b-2 border-green-200">
-                <tr>
-                  <th className="py-3 px-4 text-green-700 font-semibold">Student</th>
-                  <th className="py-3 px-4 text-green-700 font-semibold">Subject</th>
-                  <th className="py-3 px-4 text-green-700 font-semibold">Exam</th>
-                  <th className="py-3 px-4 text-green-700 font-semibold">Score</th>
-                  <th className="py-3 px-4 text-green-700 font-semibold">Status</th>
-                  <th className="py-3 px-4 text-center text-green-700 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredResults.map((res) => (
-                  <tr key={res.id} className="border-b border-gray-100 hover:bg-green-50/50">
-                    <td className="py-3 px-4 font-medium text-gray-800">{res.student_name || "—"}</td>
-                    <td className="py-3 px-4 text-gray-700">{res.subject_name || "—"}</td>
-                    <td className="py-3 px-4 text-gray-700">{res.exam_name || "—"}</td>
-                    <td className="py-3 px-4 font-semibold text-gray-800">
-                      {res.score ?? "—"} / {res.total_score ?? "—"}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        String(res.status).toLowerCase() === "approved"
-                          ? "bg-green-100 text-green-700"
-                          : String(res.status).toLowerCase() === "pending"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-red-100 text-red-700"
-                      }`}>
-                        {String(res.status || "").toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      {String(res.status).toLowerCase() === "pending" ? (
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => approveResult(res.id)}
-                            className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => rejectResult(res.id)}
-                            className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 text-sm">No action</span>
-                      )}
-                    </td>
+          <>
+            {/* DESKTOP TABLE (md+) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left min-w-[700px]">
+                <thead className="bg-green-50 border-b-2 border-green-200">
+                  <tr>
+                    <th className="py-3 px-4 text-green-700 font-semibold">Student</th>
+                    <th className="py-3 px-4 text-green-700 font-semibold">Subject</th>
+                    <th className="py-3 px-4 text-green-700 font-semibold">Exam</th>
+                    <th className="py-3 px-4 text-green-700 font-semibold">Score</th>
+                    <th className="py-3 px-4 text-green-700 font-semibold">Status</th>
+                    <th className="py-3 px-4 text-center text-green-700 font-semibold">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredResults.map((res) => (
+                    <tr key={res.id} className="border-b border-gray-100 hover:bg-green-50/50 transition-colors">
+                      <td className="py-3 px-4 font-medium text-gray-800 whitespace-nowrap">
+                        {res.student_name || "—"}
+                      </td>
+                      <td className="py-3 px-4 text-gray-700 whitespace-nowrap">
+                        {res.subject_name || "—"}
+                      </td>
+                      <td className="py-3 px-4 text-gray-700 whitespace-nowrap">
+                        {res.exam_name || "—"}
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-gray-800 whitespace-nowrap">
+                        {res.score ?? "—"} / {res.total_score ?? "—"}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(res.status)}`}>
+                          {String(res.status || "").toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {String(res.status).toLowerCase() === "pending" ? (
+                          <div className="flex justify-center gap-2">
+                            <button
+                              onClick={() => approveResult(res.id)}
+                              className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => rejectResult(res.id)}
+                              className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">No action</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* MOBILE CARDS (< md) */}
+            <div className="md:hidden space-y-3 p-3 sm:p-4">
+              {filteredResults.map((res) => (
+                <div key={res.id} className="border border-gray-200 rounded-lg p-4 hover:bg-green-50/50 transition-colors">
+                  {/* Header: Student + Status */}
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="font-bold text-lg text-gray-800">{res.student_name || "Unknown Student"}</h4>
+                      <p className="text-sm text-gray-500">
+                        {res.subject_name || "—"} • {res.exam_name || "—"}
+                      </p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(res.status)}`}>
+                      {String(res.status || "").toUpperCase()}
+                    </span>
+                  </div>
+
+                  {/* Score */}
+                  <div className="mb-3">
+                    <span className="text-sm text-gray-500">Score:</span>
+                    <span className="ml-2 font-bold text-lg text-gray-800">
+                      {res.score ?? "—"} / {res.total_score ?? "—"}
+                    </span>
+                  </div>
+
+                  {/* Actions */}
+                  {String(res.status).toLowerCase() === "pending" && (
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={() => approveResult(res.id)}
+                        className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                      >
+                        ✓ Approve
+                      </button>
+                      <button
+                        onClick={() => rejectResult(res.id)}
+                        className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                      >
+                        ✗ Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -46,57 +46,60 @@ const CoordinatorExams = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-8">
+    <div className="p-3 sm:p-4 md:p-6 space-y-6 sm:space-y-8">
+      {/* Header — Responsive */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Manage Exams</h1>
-        <p className="text-gray-500 mt-2">View and manage scheduled examinations</p>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">Manage Exams</h1>
+        <p className="text-gray-500 mt-1 sm:mt-2 text-sm sm:text-base">View and manage scheduled examinations</p>
       </div>
 
-      {/* Search */}
-      <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+      {/* Search — Full width on all screens */}
+      <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 border border-gray-100">
         <input
           type="text"
           placeholder="Search by subject, class, exam type, term or year..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full max-w-md px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"
         />
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-5 sm:grid-cols-3">
-        <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
+      {/* Stats — Responsive grid */}
+      <div className="grid gap-3 sm:gap-5 grid-cols-1 sm:grid-cols-3">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border-l-4 border-green-500">
           <p className="text-sm text-gray-500">Total Exams</p>
-          <p className="text-2xl font-bold mt-1">{exams.length}</p>
+          <p className="text-xl sm:text-2xl font-bold mt-1">{exams.length}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border-l-4 border-blue-500">
           <p className="text-sm text-gray-500">Total Subjects</p>
-          <p className="text-2xl font-bold mt-1">
+          <p className="text-xl sm:text-2xl font-bold mt-1">
             {new Set(exams.map((e) => e.subject)).size}
           </p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border-l-4 border-amber-500">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 border-l-4 border-amber-500">
           <p className="text-sm text-gray-500">Total Classes</p>
-          <p className="text-2xl font-bold mt-1">
+          <p className="text-xl sm:text-2xl font-bold mt-1">
             {new Set(exams.map((e) => e.classroom)).size}
           </p>
         </div>
       </div>
 
-      {/* Exam Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {/* Exam Cards — Responsive grid */}
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredExams.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-10 border border-gray-100 text-center text-gray-500 col-span-full">
+          <div className="bg-white rounded-xl shadow-sm p-6 sm:p-10 border border-gray-100 text-center text-gray-500 col-span-full">
             No exams found.
           </div>
         ) : (
           filteredExams.map((exam) => (
             <div
               key={exam.id}
-              className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-shadow"
+              className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 hover:shadow-lg transition-shadow"
             >
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">{exam.exam_type}</h3>
-              <div className="space-y-2 mb-5 text-gray-600">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4">
+                {exam.exam_type}
+              </h3>
+              <div className="space-y-1.5 sm:space-y-2 mb-4 sm:mb-5 text-gray-600 text-sm sm:text-base">
                 <p><span className="font-medium">Subject:</span> {exam.subject_name || "—"}</p>
                 <p><span className="font-medium">Class:</span> {exam.classroom_name || "—"}</p>
                 <p><span className="font-medium">Term:</span> {exam.term || "—"}</p>
@@ -106,7 +109,7 @@ const CoordinatorExams = () => {
               </div>
               <button
                 onClick={() => navigate(`/academic-coordinator/exams/${exam.id}`)}
-                className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
               >
                 View Exam Details
               </button>

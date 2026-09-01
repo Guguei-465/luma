@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import api from "../api/api";
 
+
 // ─── SPINNER ───
 const Spinner = () => (
   <div className="flex justify-center items-center h-80">
@@ -8,17 +9,18 @@ const Spinner = () => (
   </div>
 );
 
+
 const AcademicCoordinatorWorkload = () => {
   const [workloadData, setWorkloadData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
 
   const fetchWorkload = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
 
-      // ✅ This endpoint works for Academic Coordinator
       const { data } = await api.get("reports/teachers/workload/");
       console.log("✅ Workload data:", data);
 
@@ -31,11 +33,14 @@ const AcademicCoordinatorWorkload = () => {
     }
   }, []);
 
+
   useEffect(() => {
     fetchWorkload();
   }, [fetchWorkload]);
 
+
   if (loading) return <Spinner />;
+
 
   if (error)
     return (
@@ -46,11 +51,17 @@ const AcademicCoordinatorWorkload = () => {
       </div>
     );
 
+
   // ✅ Group by teacher name to combine duplicates
   const grouped = workloadData.reduce((acc, item) => {
     if (!item.teacher) return acc;
     if (!acc[item.teacher]) {
-      acc[item.teacher] = { teacher: item.teacher, total_assignments: 0, total_classes: 0, total_subjects: 0 };
+      acc[item.teacher] = { 
+        teacher: item.teacher, 
+        total_assignments: 0, 
+        total_classes: 0, 
+        total_subjects: 0 
+      };
     }
     acc[item.teacher].total_assignments += item.total_assignments || 0;
     acc[item.teacher].total_classes += item.total_classes || 0;
@@ -58,7 +69,9 @@ const AcademicCoordinatorWorkload = () => {
     return acc;
   }, {});
 
+
   const uniqueTeachers = Object.values(grouped);
+
 
   return (
     <div className="p-4 md:p-6 space-y-6 bg-gray-50 min-h-screen">
@@ -67,11 +80,18 @@ const AcademicCoordinatorWorkload = () => {
         <p className="text-gray-500 mt-1 text-sm">Overview of all teachers' assignments</p>
       </div>
 
+
       {uniqueTeachers.length === 0 ? (
         <div className="card text-center py-10 text-gray-500">No workload data available.</div>
       ) : (
         <div className="card">
-          <div className="overflow-x-auto">
+          {/* ==========================================
+              DESKTOP: Standard Table
+              MOBILE: Stacked Cards — NO SCROLLING
+          ========================================== */}
+          
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
@@ -93,10 +113,44 @@ const AcademicCoordinatorWorkload = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile Stacked Cards — NO HORIZONTAL SCROLL */}
+          <div className="md:hidden space-y-3">
+            {/* Mobile Header */}
+            <div className="bg-gray-50 border-b border-gray-200 rounded-t-lg px-4 py-2">
+              <span className="text-sm font-semibold text-gray-600">Teacher Workload</span>
+            </div>
+            
+            {uniqueTeachers.map((row, i) => (
+              <div 
+                key={i} 
+                className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm"
+              >
+                <div className="font-medium text-gray-800 text-base mb-3 pb-2 border-b border-gray-100">
+                  {row.teacher}
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Assignments</div>
+                    <div className="font-semibold text-gray-800">{row.total_assignments}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Classes</div>
+                    <div className="font-semibold text-gray-800">{row.total_classes}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Subjects</div>
+                    <div className="font-semibold text-gray-800">{row.total_subjects}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
 };
+
 
 export default AcademicCoordinatorWorkload;
