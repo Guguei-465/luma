@@ -26,7 +26,7 @@ const getArray = (data) => {
 
 const safeNumber = (val) => {
   const n = Number(val);
-  return isNaN(n) || val === "" ? null : n;
+  return isNaN(n) || val === "" || val === null || val === undefined ? null : n;
 };
 
 
@@ -63,7 +63,7 @@ const TeacherClassResults = () => {
       const unique = [];
       const seen = new Set();
       data.forEach(a => {
-        const cid = a.classroom_id || a.classroom;
+        const cid = String(a.classroom_id || a.classroom);
         const cname = a.classroom_name || `${a.grade || ""} ${a.stream || ""}`.trim();
         if (cid && !seen.has(cid)) {
           seen.add(cid);
@@ -81,7 +81,7 @@ const TeacherClassResults = () => {
 
 
   // ==========================================
-  // LOAD SUBJECTS FOR SELECTED CLASS
+  // LOAD SUBJECTS
   // ==========================================
   const loadSubjects = useCallback(async (classId) => {
     if (!classId) {
@@ -106,18 +106,20 @@ const TeacherClassResults = () => {
       const uniqueSubjects = [];
       const seen = new Set();
       filtered.forEach(a => {
-        const subjId = a.subject || a.subject_id;
-        const subjName = a.subject_name || "Unknown Subject";
+        const subjId = String(a.subject || a.subject_id);
+        const subjIdNum = Number(a.subject || a.subject_id);
+        const subjName = (a.subject_name || "Unknown Subject").trim();
         if (subjId && !seen.has(subjId)) {
           seen.add(subjId);
           uniqueSubjects.push({
             id: subjId,
+            idNum: subjIdNum,
             name: subjName,
-            academic_year: a.academic_year || "",
           });
         }
       });
 
+      console.log("📚 Subjects loaded:", uniqueSubjects);
       setSubjects(uniqueSubjects);
 
     } catch (err) {
@@ -129,7 +131,7 @@ const TeacherClassResults = () => {
 
 
   // ==========================================
-  // LOAD OVERALL PERFORMANCE
+  // LOAD OVERALL PERFORMANCE — ✅ MATCH BY SUBJECT NAME
   // ==========================================
   const loadOverallPerformance = useCallback(async (classId) => {
     try {
@@ -138,67 +140,112 @@ const TeacherClassResults = () => {
       setResults([]);
       setStudents([]);
 
+      console.log("📊 Loading overall performance for class:", classId);
+
       const studentsRes = await api.get(`students/?classroom=${classId}`);
       const classStudents = getArray(studentsRes.data);
       setStudents(classStudents);
+      console.log("👨‍🎓 Students in class:", classStudents.length);
 
       const classStudentIds = new Set(classStudents.map(s => String(s.id)));
       const allResults = [];
 
+      // Fetch results for EACH subject
       for (const subj of subjects) {
-        const res = await api.get(`results/results/?subject=${subj.id}`);
+        console.log(`📤 Fetching: ${subj.name} (ID: ${subj.id} / ${subj.idNum})`);
+        const res = await api.get(`results/results/?subject=${subj.idNum}`);
         const subjResults = getArray(res.data);
+        console.log(`✅ ${subj.name}: got ${subjResults.length} result(s)`);
+
         subjResults.forEach(r => {
-          if (classStudentIds.has(String(r.student || r.student_id))) {
+          const resultStudentId = String(r.student || r.student_id);
+          // ✅ Use subject_name from result — THIS IS THE RELIABLE FIELD!
+          const resultSubjName = (r.subject_name || "").trim();
+
+          if (classStudentIds.has(resultStudentId)) {
             allResults.push({
               ...r,
-              subject_name: subj.name,
-              subject_id: subj.id,
+              studentId: resultStudentId,
+              subjectName: resultSubjName,
+              marksValue: safeNumber(r.marks || r.score),
             });
           }
         });
       }
 
+      console.log("📋 All combined results:", allResults);
+
+      // Build table — MATCH BY STUDENT + SUBJECT NAME
       let tableData = classStudents.map(student => {
+        const studentIdStr = String(student.id);
+
+        // Only results for THIS student
         const studentResults = allResults.filter(
-          r => String(r.student || r.student_id) === String(student.id)
+          r => String(r.studentId || r.student || r.student_id) === studentIdStr
         );
+
+        console.log(`📝 ${student.name || student.first_name}: ${studentResults.length} result(s)`);
 
         const marksBySubject = {};
         let total = 0;
+        let hasAnyMark = false;
+
+        // ✅ KEY FIX: Match by SUBJECT NAME — not ID!
         studentResults.forEach(r => {
-          const m = safeNumber(r.marks || r.score);
-          marksBySubject[r.subject_id] = m;
-          if (m !== null) total += m;
+          const m = r.marksValue;
+          const subjKey = r.subjectName; // e.g. "English", "Mathematics"
+          marksBySubject[subjKey] = m;
+          if (m !== null) {
+            total += m;
+            hasAnyMark = true;
+          }
         });
 
+        console.log(`🔍 marksBySubject:`, marksBySubject, `Total: ${total}`);
+
+        const avg = subjects.length > 0 ? (total / subjects.length).toFixed(2) : "0.00";
+
         return {
-          studentId: student.id,
+          studentId: studentIdStr,
           studentName: student.name || `${student.first_name || ""} ${student.last_name || ""}`.trim(),
           admissionNumber: student.admission_number || "",
           marksBySubject,
-          total,
-          average: subjects.length > 0 ? (total / subjects.length).toFixed(2) : "0.00",
+          total: hasAnyMark ? total : null,
+          average: hasAnyMark ? avg : "—",
         };
       });
 
-      tableData.sort((a, b) => b.total - a.total);
+      // Sort by total
+      tableData.sort((a, b) => {
+        if (a.total === null) return 1;
+        if (b.total === null) return -1;
+        return b.total - a.total;
+      });
 
+      // Calculate positions
       if (tableData.length > 0) {
         let position = 1;
-        tableData[0].position = position;
+        tableData[0].position = tableData[0].total !== null ? position : "-";
         for (let i = 1; i < tableData.length; i++) {
-          if (tableData[i].total < tableData[i - 1].total) {
+          const prevTotal = tableData[i - 1].total;
+          const currTotal = tableData[i].total;
+          if (currTotal === null) {
+            tableData[i].position = "-";
+          } else if (prevTotal !== null && currTotal < prevTotal) {
             position = i + 1;
+            tableData[i].position = position;
+          } else {
+            tableData[i].position = position;
           }
-          tableData[i].position = position;
         }
       }
 
+      console.log("✅ Final table:", tableData);
       setResults(tableData);
 
     } catch (err) {
-      setError("Failed to load overall performance.");
+      console.error("❌ Error:", err.response?.data || err.message);
+      setError("Failed to load performance.");
     } finally {
       setLoadingResults(false);
     }
@@ -206,7 +253,7 @@ const TeacherClassResults = () => {
 
 
   // ==========================================
-  // LOAD SINGLE SUBJECT RESULTS
+  // SINGLE SUBJECT RESULTS
   // ==========================================
   const loadSingleSubjectResults = useCallback(async (classId, subjectId) => {
     try {
@@ -215,12 +262,15 @@ const TeacherClassResults = () => {
       setResults([]);
       setStudents([]);
 
+      console.log(`📘 Single subject: ${subjectId}`);
+
       const studentsRes = await api.get(`students/?classroom=${classId}`);
       const classStudents = getArray(studentsRes.data);
       setStudents(classStudents);
 
       const resultsRes = await api.get(`results/results/?subject=${subjectId}`);
       const allResults = getArray(resultsRes.data);
+      console.log("✅ Subject results:", allResults);
 
       const classStudentIds = new Set(classStudents.map(s => String(s.id)));
       const filteredResults = allResults.filter(r =>
@@ -233,7 +283,7 @@ const TeacherClassResults = () => {
         );
         const marks = safeNumber(result?.marks || result?.score);
         return {
-          studentId: student.id,
+          studentId: String(student.id),
           studentName: student.name || `${student.first_name || ""} ${student.last_name || ""}`.trim(),
           admissionNumber: student.admission_number || "",
           marks,
@@ -241,8 +291,8 @@ const TeacherClassResults = () => {
       });
 
       tableData.sort((a, b) => {
-        const marksA = a.marks ?? -1;
-        const marksB = b.marks ?? -1;
+        const marksA = a.marks !== null ? a.marks : -1;
+        const marksB = b.marks !== null ? b.marks : -1;
         return marksB - marksA;
       });
 
@@ -266,6 +316,7 @@ const TeacherClassResults = () => {
       setResults(tableData);
 
     } catch (err) {
+      console.error("❌ Error:", err.response?.data || err.message);
       setError("Failed to load results.");
     } finally {
       setLoadingResults(false);
@@ -309,6 +360,7 @@ const TeacherClassResults = () => {
   // RENDER
   // ==========================================
   if (loadingClasses) return <Spinner />;
+
 
   return (
     <div className="p-3 md:p-6">
@@ -362,7 +414,7 @@ const TeacherClassResults = () => {
               <option disabled>Loading...</option>
             ) : (
               subjects.map(s => (
-                <option key={s.id} value={s.id}>
+                <option key={s.id} value={s.idNum}>
                   📘 {s.name}
                 </option>
               ))
@@ -371,12 +423,12 @@ const TeacherClassResults = () => {
         </div>
       </div>
 
-      {/* RESULTS TABLE — FITS ON SCREEN, NO SCROLL */}
+      {/* RESULTS TABLE */}
       {selectedMode && (
         <div>
           <h4 className="text-base md:text-lg font-semibold text-gray-700 mb-3 md:mb-4">
             <i className="bi bi-award me-2"></i>
-            {selectedClassName} — {selectedMode === "overall" ? "📊 Performance" : subjects.find(s => String(s.id) === String(selectedMode))?.name}
+            {selectedClassName} — {selectedMode === "overall" ? "📊 Performance" : subjects.find(s => String(s.idNum) === String(selectedMode))?.name}
           </h4>
 
           {loadingResults ? (
@@ -387,9 +439,7 @@ const TeacherClassResults = () => {
               No results found. Marks may not have been entered yet.
             </div>
           ) : selectedMode === "overall" ? (
-            // =====================================
-            // OVERALL TABLE — NO HORIZONTAL SCROLL
-            // =====================================
+            // OVERALL TABLE — ✅ LOOK UP BY SUBJECT NAME
             <div className="rounded-lg border border-gray-200 shadow-sm overflow-hidden">
               <table className="w-full text-xs md:text-sm">
                 <thead>
@@ -414,25 +464,30 @@ const TeacherClassResults = () => {
                         {row.studentName.split(" ")[0]}
                       </td>
                       {subjects.map(s => {
-                        const m = row.marksBySubject?.[s.id];
+                        // ✅ USE SUBJECT NAME AS THE KEY — NO MORE NaN / undefined!
+                        const m = row.marksBySubject[s.name];
                         return (
                           <td key={s.id} className="px-0.5 py-2 md:px-2 md:py-2.5 text-center text-gray-700 font-medium">
                             {m !== undefined && m !== null ? m : "—"}
                           </td>
                         );
                       })}
-                      <td className="px-1 py-2 md:px-2 md:py-2.5 text-center font-bold text-gray-800">{row.total}</td>
-                      <td className="px-1 py-2 md:px-2 md:py-2.5 text-center text-gray-600 font-medium">{row.average}</td>
-                      <td className="px-1 py-2 md:px-2 md:py-2.5 text-center font-bold text-blue-600">{row.position}</td>
+                      <td className="px-1 py-2 md:px-2 md:py-2.5 text-center font-bold text-gray-800">
+                        {row.total !== null ? row.total : "—"}
+                      </td>
+                      <td className="px-1 py-2 md:px-2 md:py-2.5 text-center text-gray-600 font-medium">
+                        {row.average}
+                      </td>
+                      <td className="px-1 py-2 md:px-2 md:py-2.5 text-center font-bold text-blue-600">
+                        {row.position}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            // =====================================
-            // SINGLE SUBJECT TABLE — FITS ON SCREEN
-            // =====================================
+            // SINGLE SUBJECT TABLE
             <div className="rounded-lg border border-gray-200 shadow-sm overflow-hidden">
               <table className="w-full text-xs md:text-sm">
                 <thead>
@@ -453,7 +508,9 @@ const TeacherClassResults = () => {
                       <td className="px-2 py-2 md:px-3 md:py-2.5 text-center font-bold text-gray-800">
                         {row.marks !== null ? row.marks : "—"}
                       </td>
-                      <td className="px-2 py-2 md:px-3 md:py-2.5 text-center font-bold text-blue-600">{row.position}</td>
+                      <td className="px-2 py-2 md:px-3 md:py-2.5 text-center font-bold text-blue-600">
+                        {row.position}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

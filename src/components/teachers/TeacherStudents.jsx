@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import api from "../api/api";
 
-
 // =====================================================
 // SPINNER
 // =====================================================
@@ -10,7 +9,6 @@ const Spinner = () => (
     <div className="animate-spin rounded-full h-12 w-12 border-b-3 border-green-600"></div>
   </div>
 );
-
 
 // =====================================================
 // HELPERS
@@ -23,14 +21,12 @@ const getArray = (data) => {
   return [];
 };
 
-
 const firstValue = (...values) => {
   for (const value of values) {
     if (value !== undefined && value !== null && value !== "") return value;
   }
   return null;
 };
-
 
 const isTrue = (value) => {
   return (
@@ -39,14 +35,12 @@ const isTrue = (value) => {
   );
 };
 
-
 const getClassName = (classroom) => {
   if (!classroom) return "Class";
   if (classroom.grade && classroom.stream) return `${classroom.grade} ${classroom.stream}`;
   if (classroom.grade) return classroom.grade;
   return firstValue(classroom.name, classroom.class_name, classroom.classroom_name) || `Class ${classroom.id || ""}`;
 };
-
 
 // =====================================================
 // STUDENT DETAILS MODAL
@@ -115,9 +109,8 @@ const StudentDetailsModal = ({ student, onClose }) => {
   );
 };
 
-
 // =====================================================
-// ✅ STUDENT RESULTS MODAL — USING THE WORKING ENDPOINT
+// ✅ STUDENT RESULTS MODAL
 // =====================================================
 const StudentResultsModal = ({ student, onClose }) => {
   const [results, setResults] = useState([]);
@@ -137,19 +130,16 @@ const StudentResultsModal = ({ student, onClose }) => {
         setLoading(true);
         setError("");
 
-        // ✅ METHOD 1: USE THE PROVEN WORKING ENDPOINT
         try {
           const { data: allResults } = await api.get("results/student-results/");
           const marksList = getArray(allResults);
           console.log("📥 Total results loaded:", marksList.length);
 
-          // ✅ Filter to ONLY this student
           let filteredMarks = marksList.filter(
             (m) => Number(m.student) === CURRENT_STUDENT_ID
           );
           console.log("✅ Matched results for this student:", filteredMarks.length);
 
-          // ✅ Remove duplicates — keep latest per subject+term+year
           const uniqueMap = {};
           filteredMarks.forEach((m) => {
             const key = `${m.subject_name}-${m.term}-${m.academic_year}`;
@@ -160,7 +150,6 @@ const StudentResultsModal = ({ student, onClose }) => {
           filteredMarks = Object.values(uniqueMap);
           console.log("✅ After dedup:", filteredMarks.length);
 
-          // ✅ Format using YOUR ACTUAL FIELD NAMES
           const formatted = filteredMarks.map((m) => ({
             id: m.id,
             subject_name: m.subject_name || "Subject",
@@ -175,12 +164,11 @@ const StudentResultsModal = ({ student, onClose }) => {
           }));
 
           setResults(formatted);
-          return; // ✅ Done — don't try fallback
+          return;
         } catch (err) {
           console.log("📌 student-results endpoint issue:", err.response?.status);
         }
 
-        // ✅ METHOD 2: FALLBACK — submissions approach
         const { data: subData } = await api.get("results/result-submissions/");
         const allSubmissions = getArray(subData);
         console.log("📥 Fallback — submissions loaded:", allSubmissions.length);
@@ -275,7 +263,6 @@ const StudentResultsModal = ({ student, onClose }) => {
   );
 };
 
-
 // =====================================================
 // MAIN COMPONENT
 // =====================================================
@@ -369,29 +356,29 @@ const TeacherStudents = () => {
   if (loadingAssignments) return <Spinner />;
 
   return (
-    <div className="p-4 md:p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="p-3 sm:p-4 md:p-6 space-y-6 bg-gray-50 min-h-screen">
       {viewingStudent && <StudentDetailsModal student={viewingStudent} onClose={() => setViewingStudent(null)} />}
       {viewingResultsStudent && <StudentResultsModal student={viewingResultsStudent} onClose={() => setViewingResultsStudent(null)} />}
 
-      <div className="card">
+      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
         <h1 className="text-xl md:text-2xl font-bold text-gray-800">My Students</h1>
         <p className="text-gray-500 mt-1 text-sm">View students in your assigned classes.</p>
       </div>
 
-      {error && <div className="card bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">{error}</div>}
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">{error}</div>}
 
       {classTeacherAssignments.length === 0 ? (
-        <div className="card text-center py-12">
+        <div className="bg-white rounded-xl shadow-sm p-8 sm:p-12 border border-gray-100 text-center">
           <div className="text-gray-400 text-4xl mb-3">👩‍🏫</div>
           <h2 className="text-lg font-semibold text-gray-700">No Class-Teacher Assignment</h2>
           <p className="text-gray-500 mt-1">You are not assigned as a Class Teacher for any class yet.</p>
         </div>
       ) : (
         <>
-          <div className="card">
-            <label className="form-label block text-sm font-medium text-gray-700 mb-2">Select Class</label>
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select Class</label>
             <select
-              className="milk-input w-full"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
               value={selectedAssignment?.id || ""}
               onChange={handleAssignmentChange}
               disabled={loadingStudents}
@@ -406,7 +393,7 @@ const TeacherStudents = () => {
           </div>
 
           {selectedAssignment && (
-            <div className="card bg-green-50 border border-green-200">
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-800">
@@ -414,7 +401,7 @@ const TeacherStudents = () => {
                   </h2>
                   <p className="text-sm text-gray-500 mt-1">Students in this class</p>
                 </div>
-                <div className="bg-green-100 text-green-700 px-4 py-2 rounded-lg font-semibold">
+                <div className="bg-green-100 text-green-700 px-4 py-2 rounded-lg font-semibold whitespace-nowrap">
                   {loadingStudents ? "Loading..." : `${students.length} Student${students.length === 1 ? "" : "s"}`}
                 </div>
               </div>
@@ -422,8 +409,8 @@ const TeacherStudents = () => {
           )}
 
           {selectedAssignment ? (
-            <div className="card">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Students</h2>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <h2 className="text-lg font-semibold text-gray-800 px-4 sm:px-6 pt-4 sm:pt-6 pb-2">Students</h2>
               {loadingStudents ? (
                 <div className="flex justify-center items-center py-12">
                   <div className="animate-spin rounded-full h-10 w-10 border-b-3 border-green-600"></div>
@@ -434,48 +421,73 @@ const TeacherStudents = () => {
                   <p>No students found in this class.</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 font-medium text-gray-600 w-36">Adm No.</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-600">Full Name</th>
-                        <th className="text-center py-3 px-4 font-medium text-gray-600 w-44">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {students.map((student, index) => {
-                        const fullName = student.name || [student.first_name, student.last_name].filter(Boolean).join(" ") || "—";
-                        return (
-                          <tr key={student.id ?? `student-${index}`} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="py-3 px-4 text-gray-700 font-mono text-sm">{student.admission_number}</td>
-                            <td className="py-3 px-4 text-gray-800 font-medium">{fullName}</td>
-                            <td className="py-3 px-4 text-center">
-                              <div className="flex justify-center gap-2">
-                                <button
-                                  onClick={() => setViewingStudent(student)}
-                                  className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
-                                >
-                                  View
-                                </button>
-                                <button
-                                  onClick={() => setViewingResultsStudent(student)}
-                                  className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-                                >
-                                  Results
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div className="divide-y divide-gray-100">
+                  {/* Desktop Table Header */}
+                  <div className="hidden md:grid md:grid-cols-12 gap-2 px-4 sm:px-6 py-3 bg-gray-50 font-medium text-gray-600 text-sm">
+                    <div className="md:col-span-3">Adm No.</div>
+                    <div className="md:col-span-5">Full Name</div>
+                    <div className="md:col-span-4 text-center">Actions</div>
+                  </div>
+
+                  {/* Student Cards — Stacked on Mobile, Grid on Desktop */}
+                  {students.map((student, index) => {
+                    const fullName = student.name || [student.first_name, student.last_name].filter(Boolean).join(" ") || "—";
+                    return (
+                      <div
+                        key={student.id ?? `student-${index}`}
+                        className="px-4 sm:px-6 py-4 hover:bg-green-50/50 transition-colors"
+                      >
+                        {/* Mobile Layout — Stacked Card */}
+                        <div className="md:hidden space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-mono text-sm text-gray-500">{student.admission_number}</p>
+                              <p className="font-medium text-gray-800 mt-1">{fullName}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              onClick={() => setViewingStudent(student)}
+                              className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 font-medium"
+                            >
+                              View
+                            </button>
+                            <button
+                              onClick={() => setViewingResultsStudent(student)}
+                              className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 font-medium"
+                            >
+                              Results
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Desktop Layout — Grid Row */}
+                        <div className="hidden md:grid md:grid-cols-12 gap-2 items-center">
+                          <div className="md:col-span-3 font-mono text-sm text-gray-700">{student.admission_number}</div>
+                          <div className="md:col-span-5 text-gray-800 font-medium">{fullName}</div>
+                          <div className="md:col-span-4 flex justify-center gap-2">
+                            <button
+                              onClick={() => setViewingStudent(student)}
+                              className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
+                            >
+                              View
+                            </button>
+                            <button
+                              onClick={() => setViewingResultsStudent(student)}
+                              className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                            >
+                              Results
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
           ) : (
-            <div className="card text-center py-10 text-gray-500">
+            <div className="bg-white rounded-xl shadow-sm p-6 sm:p-10 border border-gray-100 text-center text-gray-500">
               <p>Please select a class to view students.</p>
             </div>
           )}

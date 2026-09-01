@@ -1,6 +1,5 @@
 import { NavLink } from "react-router-dom";
 
-
 const AdminSideBar = ({ isOpen, setIsOpen }) => {
   const linkClass = ({ isActive }) =>
     `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm ${
@@ -9,10 +8,8 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
         : "text-gray-300 hover:bg-white/10 hover:text-white"
     }`;
 
-
   const sectionHeading =
     "text-gray-300 text-sm font-semibold uppercase tracking-wider px-3 py-2 mt-6 mb-1";
-
 
   const navItems = [
     { to: "/admin-dashboard", end: true, icon: "bi bi-speedometer2", label: "Dashboard" },
@@ -21,25 +18,21 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
     { to: "/admin-dashboard/parents", icon: "bi bi-people", label: "Parents" },
   ];
 
-
   const financeItems = [
     { to: "/admin-dashboard/fees-structures", icon: "bi bi-receipt", label: "Fee Structures List" },
     { to: "/admin-dashboard/fees-payments", icon: "bi bi-credit-card", label: "Payments List" },
   ];
-
 
   const academicItems = [
     { to: "/admin-dashboard/exams", icon: "bi bi-pencil-square", label: "Exams" },
     { to: "/admin-dashboard/class-performance", icon: "bi bi-bar-chart-fill", label: "Class Performance" },
   ];
 
-
   const systemItems = [
     { to: "/admin-dashboard/users", icon: "bi bi-person-badge", label: "Users" },
     { to: "/admin-dashboard/notices", icon: "bi bi-megaphone-fill", label: "Notices" },
     { to: "/admin-dashboard/profile", icon: "bi bi-person-fill", label: "Profile" },
   ];
-
 
   const renderLinks = (items) =>
     items.map((item) => (
@@ -55,9 +48,19 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
       </NavLink>
     ));
 
-
   return (
     <>
+      {/* HIDE SCROLLBAR BUT KEEP SCROLLING */}
+      <style>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none !important;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
+        }
+      `}</style>
+
       {/* Mobile overlay */}
       {isOpen && (
         <div
@@ -66,8 +69,7 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
         />
       )}
 
-
-      {/* Sidebar */}
+      {/* Sidebar — scrolls smoothly, NO scrollbar visible */}
       <aside
         className={`
           fixed md:static
@@ -82,6 +84,7 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
           transition-transform
           duration-300
           overflow-y-auto
+          hide-scrollbar
           ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
       >
@@ -101,25 +104,20 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
             </div>
           </div>
 
-
           {/* NAVIGATION */}
           <nav className="space-y-1">
             <p className={sectionHeading}>Main</p>
             {renderLinks(navItems)}
 
-
             <p className={sectionHeading}>Finance</p>
             {renderLinks(financeItems)}
-
 
             <p className={sectionHeading}>Academic</p>
             {renderLinks(academicItems)}
 
-
             <p className={sectionHeading}>System</p>
             {renderLinks(systemItems)}
           </nav>
-
 
           {/* FOOTER */}
           <div className="mt-8 pt-5 border-t border-green-800">
@@ -138,6 +136,5 @@ const AdminSideBar = ({ isOpen, setIsOpen }) => {
     </>
   );
 };
-
 
 export default AdminSideBar;

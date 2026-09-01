@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import api from "../api/api";
 import FeedbackAlert from "../ui/FeedbackAlert";
 
+
 // --- Reusable Spinners ---
 const Spinner = () => (
   <div className="flex justify-center items-center h-80">
@@ -9,9 +10,11 @@ const Spinner = () => (
   </div>
 );
 
+
 const ButtonSpinner = () => (
   <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
 );
+
 
 const SentNotices = () => {
   const [announcements, setAnnouncements] = useState([]);
@@ -23,6 +26,7 @@ const SentNotices = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterTarget, setFilterTarget] = useState("all");
   const [viewItem, setViewItem] = useState(null);
+
 
 // ✅ Fetch ALL pages (handles backend pagination)
   const fetchItems = useCallback(async () => {
@@ -62,9 +66,11 @@ const SentNotices = () => {
     }
   }, []);
 
+
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
+
 
   // --- Search & Filter ---
   useEffect(() => {
@@ -81,6 +87,7 @@ const SentNotices = () => {
     }
     setFilteredAnnouncements(result);
   }, [announcements, searchTerm, filterTarget]);
+
 
   // --- Actions ---
   const resendItem = async (itemId) => {
@@ -99,6 +106,7 @@ const SentNotices = () => {
     }
   };
 
+
   const deleteItem = async (itemId) => {
     if (!window.confirm("Delete this announcement?")) return;
     setError("");
@@ -116,13 +124,16 @@ const SentNotices = () => {
     }
   };
 
+
   const PriorityBadge = ({ priority }) => {
     if (priority === "High") return <span className="px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">HIGH</span>;
     if (priority === "Low") return <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700">LOW</span>;
     return <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">NORMAL</span>;
   };
 
+
   if (loading) return <Spinner />;
+
 
   return (
     <div className="p-4 md:p-6 space-y-6 bg-gray-50 min-h-screen">
@@ -131,11 +142,13 @@ const SentNotices = () => {
           <h1 className="text-xl md:text-2xl font-bold text-gray-800">📨 Sent Announcements</h1>
           <p className="text-gray-500 mt-1 text-sm">View announcements sent to parents or all users</p>
         </div>
-<button onClick={fetchItems} className="milk-btn whitespace-nowrap">🔄 Refresh History</button>
+        <button onClick={fetchItems} className="milk-btn whitespace-nowrap">🔄 Refresh History</button>
       </div>
+
 
       {success && <FeedbackAlert type="success" message={success} onDismiss={() => setSuccess("")} />}
       {error && <FeedbackAlert type="error" message={error} onDismiss={() => setError("")} />}
+
 
       <div className="card space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -163,6 +176,7 @@ const SentNotices = () => {
         <p className="text-sm text-gray-600">Showing <strong>{filteredAnnouncements.length}</strong> of {announcements.length} records</p>
       </div>
 
+
       <div className="card overflow-x-auto">
         <h2 className="text-lg font-semibold text-gray-800 mb-3">Sent List</h2>
         {filteredAnnouncements.length === 0 ? (
@@ -171,38 +185,47 @@ const SentNotices = () => {
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-gray-100">
-                <th className="p-3 text-left border-b">Date Sent</th>
+                <th className="p-3 text-left border-b whitespace-nowrap">Date Sent</th>
                 <th className="p-3 text-left border-b">Target Audience</th>
                 <th className="p-3 text-left border-b">Title</th>
                 <th className="p-3 text-left border-b">Priority</th>
-                <th className="p-3 text-left border-b">Actions</th>
+                <th className="p-3 text-left border-b whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredAnnouncements.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="p-3 border-b text-sm">
-                    {item.created_at ? new Date(item.created_at).toLocaleString() : "—"}
+                  <td className="p-3 border-b text-sm whitespace-nowrap">
+                    {item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}
                   </td>
-                  <td className="p-3 border-b font-medium">{item.target}</td>
-                  <td className="p-3 border-b">{item.title}</td>
+                  <td className="p-3 border-b font-medium text-sm">{item.target}</td>
+                  <td className="p-3 border-b text-sm">{item.title}</td>
                   <td className="p-3 border-b"><PriorityBadge priority={item.priority} /></td>
-                  <td className="p-3 border-b space-x-2 text-sm">
-                    <button onClick={() => setViewItem(item)} className="text-blue-600 hover:underline">View</button>
-                    <button
-                      onClick={() => resendItem(item.id)}
-                      disabled={actionLoadingId === item.id}
-                      className="text-green-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {actionLoadingId === item.id ? "Resending..." : "Resend"}
-                    </button>
-                    <button
-                      onClick={() => deleteItem(item.id)}
-                      disabled={actionLoadingId === item.id}
-                      className="text-red-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {actionLoadingId === item.id ? <ButtonSpinner /> : "Delete"}
-                    </button>
+                  
+                  {/* ✅ BIGGER BUTTONS — spaced apart, easier to tap */}
+                  <td className="p-2 border-b">
+                    <div className="flex flex-col sm:flex-row gap-2 min-w-[180px]">
+                      <button 
+                        onClick={() => setViewItem(item)}
+                        className="px-3 py-2.5 text-sm font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition whitespace-nowrap"
+                      >
+                        👁️ View
+                      </button>
+                      <button
+                        onClick={() => resendItem(item.id)}
+                        disabled={actionLoadingId === item.id}
+                        className="px-3 py-2.5 text-sm font-medium bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {actionLoadingId === item.id ? "Sending..." : "📤 Resend"}
+                      </button>
+                      <button
+                        onClick={() => deleteItem(item.id)}
+                        disabled={actionLoadingId === item.id}
+                        className="px-3 py-2.5 text-sm font-medium bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {actionLoadingId === item.id ? "..." : "🗑️ Delete"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -210,6 +233,7 @@ const SentNotices = () => {
           </table>
         )}
       </div>
+
 
       {viewItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -231,5 +255,6 @@ const SentNotices = () => {
     </div>
   );
 };
+
 
 export default SentNotices;
