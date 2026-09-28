@@ -36,7 +36,11 @@
     "@eslint/js": "^10.0.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+<<<<<<< HEAD
     "@vitejs/plugin-react": "^6.1.1",
+=======
+    "@vitejs/plugin-react": "^6.0.3",
+>>>>>>> 2b3ffb1f22043a22a10cbc412c2c25c04fbce9e1
     "eslint": "^10.6.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",

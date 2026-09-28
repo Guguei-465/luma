@@ -91,7 +91,10 @@ import TeacherNotifications from "./components/teachers/TeacherNotifications";
 import TeacherClassResults from "./components/teachers/TeacherClassResults";
 import CoordinatorClassPerformance from "./components/academiccoordinator/CoordinatorClassPerformance";
 import AdminClassPerformance from "./components/admin/AdminClassPerformance";
+<<<<<<< HEAD
 import FeeManagement from "./components/accountant/FeeManagement";
+=======
+>>>>>>> 2b3ffb1f22043a22a10cbc412c2c25c04fbce9e1
  
 
 function App() {
@@ -225,7 +228,10 @@ function App() {
             <Route path="receipt-generator" element={<ReceiptGenerator />} />
             <Route path="record-payment" element={<RecordPayment />} />
             <Route path="sent-notices" element={<SentNotices />} />
+<<<<<<< HEAD
             <Route path="/accountant/fee-management" element={<FeeManagement />} />
+=======
+>>>>>>> 2b3ffb1f22043a22a10cbc412c2c25c04fbce9e1
           </Route>
 
 {/* ================= PARENT (Fixed & Protected) ================= */}
